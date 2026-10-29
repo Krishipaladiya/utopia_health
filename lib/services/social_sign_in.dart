@@ -15,7 +15,10 @@ class SocialSignIn {
 
   static final SocialSignIn instance = SocialSignIn._();
 
-  static const _clientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
+  static const _clientId = String.fromEnvironment(
+    'GOOGLE_CLIENT_ID',
+    defaultValue: '40549200434-frs420g5jkcv6fjsckojbp3efe01mg9e.apps.googleusercontent.com',
+  );
   static const _serverClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
 
   bool _googleReady = false;

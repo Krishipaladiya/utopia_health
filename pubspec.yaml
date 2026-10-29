@@ -40,8 +40,8 @@ dependencies:
   signalr_netcore: ^1.4.4
   firebase_core: ^5.1.0
   firebase_messaging: ^17.0.1
-  google_sign_in: ^7.2.0
   sign_in_with_apple: ^8.2.0
+  google_sign_in: ^7.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -60,6 +60,10 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  # iOS: use CocoaPods instead of Swift Package Manager. With SPM, Firebase and
+  # Google Sign-In ask for clashing versions of the same library and the build fails.
+  config:
+    enable-swift-package-manager: false
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

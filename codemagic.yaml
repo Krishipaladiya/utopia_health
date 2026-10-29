@@ -18,8 +18,6 @@ workflows:
         BUNDLE_ID: com.utopia.utopiaHealth
         # Your server address (https). Change when the domain changes.
         API_BASE: https://utopiahealth.cloudverve.in
-        # Optional, only for Google sign-in:
-        # GOOGLE_CLIENT_ID: xxxx.apps.googleusercontent.com
       # CERTIFICATE_PRIVATE_KEY must be added in the Codemagic app settings as a SECURE variable
       # (see IOS_SIGNING.md in D:TOPIAHEALTH). Codemagic uses it to create your Apple Distribution certificate.
 
@@ -42,8 +40,7 @@ workflows:
           flutter build ipa --release \
             --export-options-plist=/Users/builder/export_options.plist \
             --build-number=$BUILD_NUMBER \
-            --dart-define=API_BASE=$API_BASE \
-            --dart-define=GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
+            --dart-define=API_BASE=$API_BASE
 
     artifacts:
       - build/ios/ipa/*.ipa
