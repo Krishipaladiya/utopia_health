@@ -14,12 +14,15 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      # Variables are read only from groups listed here. Put CERTIFICATE_PRIVATE_KEY in group "ios_signing".
+      groups:
+        - ios_signing
       vars:
         BUNDLE_ID: com.utopia.utopiaHealth
         # Your server address (https). Change when the domain changes.
         API_BASE: https://utopiahealth.cloudverve.in
       # CERTIFICATE_PRIVATE_KEY must be added in the Codemagic app settings as a SECURE variable
-      # (see IOS_SIGNING.md in D:TOPIAHEALTH). Codemagic uses it to create your Apple Distribution certificate.
+      # Codemagic uses it to create your Apple Distribution certificate.
 
     scripts:
       - name: Get Flutter packages
@@ -27,6 +30,7 @@ workflows:
 
       - name: Set up iOS signing (creates certificate and profile if missing)
         script: |
+          set -e
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
