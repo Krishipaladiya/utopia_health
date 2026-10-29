@@ -4,6 +4,9 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import 'api_client.dart';
 
+/// What a provider gives back: the ID token, and the person's name when known.
+typedef SocialToken = ({String token, String? name});
+
 /// Google and Apple sign-in. They only work after the client ids are set up
 /// (see backend/SOCIAL_LOGIN.md). Without them the buttons show a clear message.
 ///
@@ -28,7 +31,7 @@ class SocialSignIn {
 
   /// An ID token from Google, or null if the person cancelled.
   /// Throws [ApiException] with code `social_not_configured` if client ids are missing.
-  Future<String?> googleIdToken() async {
+  Future<SocialToken?> googleIdToken() async {
     if (_clientId.isEmpty && _serverClientId.isEmpty) {
       throw ApiException(501, 'social_not_configured');
     }
@@ -43,7 +46,7 @@ class SocialSignIn {
       final account = await GoogleSignIn.instance.authenticate();
       final token = account.authentication.idToken;
       if (token == null) throw ApiException(401, 'invalid_social_token');
-      return token;
+      return (token: token, name: account.displayName);
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) return null;
       debugPrint('Google sign-in failed: $e');
@@ -52,12 +55,18 @@ class SocialSignIn {
   }
 
   /// An identity token from Apple, or null if the person cancelled.
-  Future<String?> appleIdToken() async {
+  Future<SocialToken?> appleIdToken() async {
     try {
       final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: [AppleIDAuthorizationScopes.email],
+        scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
       );
-      return credential.identityToken;
+      final token = credential.identityToken;
+      if (token == null) throw ApiException(401, 'invalid_social_token');
+      // Apple sends the name only the first time.
+      final name = [credential.givenName, credential.familyName]
+          .where((p) => p != null && p.isNotEmpty)
+          .join(' ');
+      return (token: token, name: name.isEmpty ? null : name);
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code == AuthorizationErrorCode.canceled) return null;
       debugPrint('Apple sign-in failed: $e');

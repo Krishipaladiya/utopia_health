@@ -54,14 +54,28 @@ class AuthService {
     await api.post('/api/register/request', {'phoneProof': phoneProof, 'emailProof': emailProof});
   }
 
-  /// Google / Apple sign-in for a doctor our team already onboarded.
-  Future<void> socialLogin(String provider, String idToken) async {
+  /// Google / Apple sign-in. The first time, the server creates the account.
+  /// Returns true when the doctor still has to add a mobile number.
+  Future<bool> socialLogin(String provider, String idToken, {String? name}) async {
     final data = await api.post(
       '/api/auth/social',
-      {'provider': provider, 'idToken': idToken},
+      {'provider': provider, 'idToken': idToken, 'name': name},
     ) as Map<String, dynamic>;
     await _finish(data);
+    return data['needsPhone'] == true;
   }
+
+  /// Adds the mobile number (checked with the SMS code) and the clinic name.
+  Future<void> addPhone(String phone, String code, {String? clinicName}) async {
+    final data = await api.post(
+      '/api/doctor/phone',
+      {'phone': phone, 'code': code, 'clinicName': clinicName},
+    ) as Map<String, dynamic>;
+    doctorProfile.applyJson(data);
+  }
+
+  /// Signed in but no mobile number yet (first Google / Apple sign-in).
+  bool get needsPhone => api.hasSession && doctorProfile.phone.isEmpty;
 
   Future<void> _finish(Map<String, dynamic> data) async {
     await api.saveSession(data['token'] as String);

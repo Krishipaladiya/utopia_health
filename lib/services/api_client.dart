@@ -54,6 +54,7 @@ class ApiException implements Exception {
         'social_not_configured' =>
           'This sign-in is not set up yet. Please use your mobile number.',
         'invalid_social_token' => 'Sign-in failed. Please try again.',
+        'phone_in_use' => 'This number is already used by another account.',
         'network' => 'Cannot reach the server. Check your connection.',
         _ => message ?? 'Something went wrong. Please try again.',
       };

@@ -6,6 +6,7 @@ import '../../core/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import 'auth_widgets.dart';
+import 'social_buttons.dart';
 
 enum _Step { phone, phoneCode, email, emailCode, done }
 
@@ -186,6 +187,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             hint: 'The code is sent as soon as you enter all 10 digits.',
             retry: _validPhone ? _startPhone : null,
           ),
+          const SizedBox(height: 28),
+          const SocialButtons(caption: 'or start now with'),
         ],
         if (_step == _Step.phoneCode)
           OtpPanel(

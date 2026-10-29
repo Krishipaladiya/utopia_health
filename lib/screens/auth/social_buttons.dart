@@ -4,11 +4,14 @@ import '../../core/app_theme.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/social_sign_in.dart';
+import 'add_phone_screen.dart';
 import 'auth_flow.dart';
 
-/// "or continue with" Google / Apple. For doctors our team already onboarded.
+/// "or continue with" Google / Apple. A new doctor gets an account at once.
 class SocialButtons extends StatefulWidget {
-  const SocialButtons({super.key});
+  const SocialButtons({super.key, this.caption = 'or continue with'});
+
+  final String caption;
 
   @override
   State<SocialButtons> createState() => _SocialButtonsState();
@@ -17,14 +20,22 @@ class SocialButtons extends StatefulWidget {
 class _SocialButtonsState extends State<SocialButtons> {
   bool _busy = false;
 
-  Future<void> _run(String provider, Future<String?> Function() getToken) async {
+  Future<void> _run(String provider, Future<SocialToken?> Function() getToken) async {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
-      final token = await getToken();
-      if (token == null) return; // cancelled
-      await auth.socialLogin(provider, token);
-      if (mounted) enterApp(context);
+      final result = await getToken();
+      if (result == null) return; // cancelled
+      final needsPhone = await auth.socialLogin(provider, result.token, name: result.name);
+      if (!mounted) return;
+      if (needsPhone) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AddPhoneScreen()),
+          (_) => false,
+        );
+      } else {
+        enterApp(context);
+      }
     } on ApiException catch (e) {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(SnackBar(content: Text(e.friendly)));
@@ -65,7 +76,7 @@ class _SocialButtonsState extends State<SocialButtons> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
-                'or continue with',
+                widget.caption,
                 style: AppText.inter(fontSize: 12.5, color: AppColors.textMuted),
               ),
             ),

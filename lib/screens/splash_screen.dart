@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../services/auth_service.dart';
 import '../widgets/wave_background.dart';
+import 'auth/add_phone_screen.dart';
 import 'auth/login_screen.dart';
 import 'home_shell.dart';
 
@@ -34,7 +35,11 @@ class _SplashScreenState extends State<SplashScreen> {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (_, _, _) => loggedIn ? const HomeShell() : const LoginScreen(),
+        pageBuilder: (_, _, _) => !loggedIn
+            ? const LoginScreen()
+            : auth.needsPhone
+                ? const AddPhoneScreen()
+                : const HomeShell(),
         transitionsBuilder: (_, animation, _, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
