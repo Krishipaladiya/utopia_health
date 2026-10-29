@@ -8,7 +8,7 @@ workflows:
 
     integrations:
       # The name you give the App Store Connect API key in Codemagic (Team settings -> Integrations).
-      app_store_connect: Utopia Health
+      app_store_connect: CLOUDVERVE TECHNOLOGIES LLP
 
     environment:
       flutter: stable
