@@ -1,0 +1,157 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Where the .NET API lives.
+class ApiConfig {
+  ApiConfig._();
+
+  /// The live server address. When the company domain changes, change ONLY this line
+  /// (or build with --dart-define=API_BASE=https://new-domain).
+  static const productionApi = 'https://utopiahealth.cloudverve.in';
+
+  static const _override = String.fromEnvironment('API_BASE');
+
+  static String get baseUrl {
+    if (_override.isNotEmpty) return _override;
+    // TestFlight / release builds talk to the real server.
+    if (kReleaseMode) return productionApi;
+    // Debug runs on this PC: the Android emulator reaches the PC through 10.0.2.2.
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:5080';
+    }
+    return 'http://127.0.0.1:5080';
+  }
+}
+
+class ApiException implements Exception {
+  ApiException(this.status, this.code, [this.message]);
+
+  final int status;
+
+  /// Machine code from the API, e.g. invalid_otp, not_registered, slot_full.
+  final String code;
+  final String? message;
+
+  bool get isUnauthorized => status == 401 && code != 'invalid_otp';
+
+  /// Short text safe to show in the UI.
+  String get friendly => switch (code) {
+        'invalid_otp' => 'That code is not correct. Try again.',
+        'not_registered' => 'This number is not registered yet. Please register first.',
+        'already_registered' => 'This number is already registered. Please log in.',
+        'invalid_phone' => 'Enter a valid 10-digit mobile number.',
+        'slot_full' => 'That slot is full. Pick another time.',
+        'slot_in_past' => 'That time has already passed.',
+        'not_a_slot' => 'That time is not an available slot.',
+        'marking_missed_disabled' => 'Marking as missed is turned off in your slot settings.',
+        'registration_pending' =>
+          'Your registration is being processed. Our team will contact you soon.',
+        'verification_expired' => 'Verification expired. Please start again.',
+        'invalid_email' => 'Enter a valid email address.',
+        'social_not_configured' =>
+          'This sign-in is not set up yet. Please use your mobile number.',
+        'invalid_social_token' => 'Sign-in failed. Please try again.',
+        'network' => 'Cannot reach the server. Check your connection.',
+        _ => message ?? 'Something went wrong. Please try again.',
+      };
+
+  @override
+  String toString() => 'ApiException($status, $code)';
+}
+
+class ApiClient {
+  ApiClient._();
+
+  static final ApiClient instance = ApiClient._();
+
+  static const _tokenKey = 'auth_token';
+
+  String? _token;
+  http.Client _http = http.Client();
+
+  /// Called when the server says the saved login is no longer valid.
+  VoidCallback? onUnauthorized;
+
+  String? get token => _token;
+  bool get hasSession => _token != null;
+
+  @visibleForTesting
+  set httpClient(http.Client c) => _http = c;
+
+  Future<void> loadSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _token = prefs.getString(_tokenKey);
+    } catch (_) {
+      _token = null;
+    }
+  }
+
+  Future<void> saveSession(String token) async {
+    _token = token;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_tokenKey, token);
+    } catch (_) {}
+  }
+
+  Future<void> clearSession() async {
+    _token = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_tokenKey);
+    } catch (_) {}
+  }
+
+  Map<String, String> get _headers => {
+        'Content-Type': 'application/json',
+        if (_token != null) 'Authorization': 'Bearer $_token',
+      };
+
+  Uri _uri(String path, [Map<String, String?>? query]) {
+    final q = <String, String>{
+      for (final e in (query ?? {}).entries)
+        if (e.value != null && e.value!.isNotEmpty) e.key: e.value!,
+    };
+    return Uri.parse('${ApiConfig.baseUrl}$path').replace(queryParameters: q.isEmpty ? null : q);
+  }
+
+  Future<dynamic> get(String path, {Map<String, String?>? query}) =>
+      _send(() => _http.get(_uri(path, query), headers: _headers));
+
+  Future<dynamic> post(String path, [Object? body]) => _send(
+        () => _http.post(_uri(path), headers: _headers, body: body == null ? null : jsonEncode(body)),
+      );
+
+  Future<dynamic> put(String path, Object body) =>
+      _send(() => _http.put(_uri(path), headers: _headers, body: jsonEncode(body)));
+
+  Future<dynamic> _send(Future<http.Response> Function() call) async {
+    final http.Response res;
+    try {
+      res = await call().timeout(const Duration(seconds: 15));
+    } catch (e) {
+      debugPrint('API request failed: $e');
+      throw ApiException(0, 'network');
+    }
+
+    dynamic data;
+    if (res.body.isNotEmpty) {
+      try {
+        data = jsonDecode(res.body);
+      } catch (_) {}
+    }
+
+    if (res.statusCode >= 200 && res.statusCode < 300) return data;
+
+    final code = data is Map && data['error'] is String ? data['error'] as String : 'http_${res.statusCode}';
+    final ex = ApiException(res.statusCode, code);
+    if (ex.isUnauthorized) onUnauthorized?.call();
+    throw ex;
+  }
+}
+
+final api = ApiClient.instance;
