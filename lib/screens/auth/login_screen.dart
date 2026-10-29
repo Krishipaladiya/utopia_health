@@ -78,14 +78,11 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
-          const AuthLogo(),
-          const SizedBox(height: 32),
           AuthHeading(
-            title: _otpStep ? 'Verify your number' : 'Welcome back',
+            title: _otpStep ? 'Verify your number' : 'Welcome, Doctor',
             subtitle: _otpStep
                 ? 'Enter the 6-digit code. You will be logged in automatically.'
-                : 'Enter your mobile number. We will send a code by SMS.',
+                : 'Log in with your mobile number. We send a 6-digit code by SMS.',
           ),
           const SizedBox(height: 24),
           if (!_otpStep) ...[
@@ -144,11 +141,8 @@ class _LoginScreenState extends State<LoginScreen> {
               onResend: _send,
               onSubmit: _verify,
             ),
-          if (!_otpStep) ...[
-            const SizedBox(height: 28),
-            const SocialButtons(),
-          ],
-          const SizedBox(height: 26),
+          if (!_otpStep) const SocialButtons(),
+          const SizedBox(height: 22),
           Center(
             child: Text.rich(
               TextSpan(
@@ -165,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       child: Text(
-                        'Register',
+                        'Create account',
                         style: AppText.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,

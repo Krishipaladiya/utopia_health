@@ -135,8 +135,10 @@ class ClinicStore extends ChangeNotifier {
     String? complaint,
     required bool addToQueue,
     bool whatsAppConsent = true,
+    Map<String, String> details = const {},
   }) async {
     final data = await api.post('/api/patients', {
+      ...details,
       'name': name,
       'phone': phone,
       'age': age,
@@ -158,6 +160,40 @@ class ClinicStore extends ChangeNotifier {
       if (p.phone.replaceAll(RegExp(r'\D'), '').endsWith(last10)) return p;
     }
     return null;
+  }
+
+  /// Finds a mobile number in this clinic and at other doctors' clinics.
+  Future<PatientLookup> lookup(String phone) async {
+    final data = await api.get('/api/patients/lookup', query: {'phone': phone}) as Map<String, dynamic>;
+    return PatientLookup.fromJson(data);
+  }
+
+  Future<PatientProfile> profile(Patient patient) async {
+    final data = await api.get('/api/patients/${patient.dbId}/profile') as Map<String, dynamic>;
+    return PatientProfile.fromJson(data);
+  }
+
+  Future<Patient> saveDetails(Patient patient, Map<String, String> details) async {
+    final data = await api.put('/api/patients/${patient.dbId}/details', details) as Map<String, dynamic>;
+    await refreshPatients();
+    return Patient.fromJson(data);
+  }
+
+  /// Drop message: every doctor who treats this patient can read it.
+  Future<void> addNote(Patient patient, String text) async {
+    await api.post('/api/patients/${patient.dbId}/notes', {'text': text});
+  }
+
+  Future<void> addVoiceNote(Patient patient, String path, int seconds) async {
+    await api.upload('/api/patients/${patient.dbId}/voice', path, fields: {'seconds': '$seconds'});
+  }
+
+  Future<void> deleteNote(int id) async {
+    await api.delete('/api/notes/$id');
+  }
+
+  Future<void> uploadFile(Patient patient, String path, {String? fileName}) async {
+    await api.upload('/api/patients/${patient.dbId}/files', path, fileName: fileName);
   }
 
   Future<List<RecordEntry>> records(Patient patient, String clinicName) async {

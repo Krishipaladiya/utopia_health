@@ -92,5 +92,15 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
-	</dict>
+		<key>NSCameraUsageDescription</key>
+	<string>Take photos of reports and prescriptions for the patient record.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Attach report images from your photos to the patient record.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record voice messages for the patient record.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+	</array>
+</dict>
 </plist>

@@ -19,8 +19,16 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell>
+    with SingleTickerProviderStateMixin {
   int _index = 0;
+
+  /// Fades the tab in when the doctor switches tabs.
+  late final _tabFade = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 260),
+    value: 1,
+  );
 
   @override
   void initState() {
@@ -37,6 +45,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void dispose() {
     notifications.onNew = null;
+    _tabFade.dispose();
     RealtimeService.instance.stop();
     super.dispose();
   }
@@ -88,19 +97,33 @@ class _HomeShellState extends State<HomeShell> {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: IndexedStack(
-          index: _index,
-          children: const [
-            QueueScreen(),
-            RxScreen(),
-            PatientsScreen(),
-            FinanceScreen(),
-          ],
+        child: FadeTransition(
+          opacity: CurvedAnimation(parent: _tabFade, curve: Curves.easeOut),
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0, 0.015), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: _tabFade, curve: Curves.easeOutCubic),
+                ),
+            child: IndexedStack(
+              index: _index,
+              children: const [
+                QueueScreen(),
+                RxScreen(),
+                PatientsScreen(),
+                FinanceScreen(),
+              ],
+            ),
+          ),
         ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
+        onDestinationSelected: (value) {
+          if (value == _index) return;
+          FocusManager.instance.primaryFocus?.unfocus();
+          setState(() => _index = value);
+          _tabFade.forward(from: 0);
+        },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),

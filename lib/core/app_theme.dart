@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -110,6 +111,15 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.pageBackground,
       fontFamily: 'Inter',
       splashFactory: InkRipple.splashFactory,
+      // Smooth page changes: iOS swipe-back style, soft fade elsewhere.
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
       cardTheme: CardThemeData(
         color: Colors.white,
         elevation: 0,

@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/app_theme.dart';
-import '../../widgets/wave_background.dart';
 
-/// Page frame shared by login and register: brand logo, content, wave footer.
+/// Page frame shared by login and register: soft brand header with the logo,
+/// then the form on a white card that slides up.
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     super.key,
@@ -23,18 +23,33 @@ class AuthScaffold extends StatelessWidget {
       backgroundColor: AppColors.pageBackground,
       body: Stack(
         children: [
-          const Positioned(
+          // Brand header: mint gradient with soft circles.
+          Positioned(
+            top: 0,
             left: 0,
             right: 0,
-            bottom: 0,
-            height: 150,
-            child: WaveBackground(start: 0.34),
+            height: 300,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFFD9F2E8), AppColors.pageBackground],
+                ),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(top: -60, right: -40, child: _circle(180, 0.55)),
+                  Positioned(top: 90, left: -50, child: _circle(120, 0.35)),
+                ],
+              ),
+            ),
           ),
           SafeArea(
             child: Column(
               children: [
                 SizedBox(
-                  height: 52,
+                  height: 48,
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: showBack
@@ -47,10 +62,45 @@ class AuthScaffold extends StatelessWidget {
                 ),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 140),
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    child: child,
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                    child: Column(
+                      children: [
+                        const _FadeSlide(
+                          delay: 0,
+                          child: Image(
+                            image: AssetImage('assets/images/logo_horizontal.png'),
+                            width: 200,
+                          ),
+                        ),
+                        const SizedBox(height: 26),
+                        _FadeSlide(
+                          delay: 120,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.fromLTRB(20, 26, 20, 22),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: const [
+                                BoxShadow(color: Color(0x141B2740), blurRadius: 30, offset: Offset(0, 12)),
+                              ],
+                            ),
+                            child: AnimatedSize(
+                              duration: const Duration(milliseconds: 260),
+                              curve: Curves.easeOutCubic,
+                              alignment: Alignment.topCenter,
+                              child: child,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          'Secure clinic login • Utopia Health',
+                          style: AppText.inter(fontSize: 11.5, color: AppColors.textFaint),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -60,19 +110,45 @@ class AuthScaffold extends StatelessWidget {
       ),
     );
   }
+
+  static Widget _circle(double size, double opacity) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white.withValues(alpha: opacity),
+        ),
+      );
 }
 
+/// Fades and slides its child in when the screen opens.
+class _FadeSlide extends StatelessWidget {
+  const _FadeSlide({required this.child, required this.delay});
+
+  final Widget child;
+  final int delay;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 520 + delay),
+      curve: Interval(delay / (520 + delay), 1, curve: Curves.easeOutCubic),
+      builder: (context, t, child) => Opacity(
+        opacity: t,
+        child: Transform.translate(offset: Offset(0, 24 * (1 - t)), child: child),
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Kept for screens that show the logo inside their content.
 class AuthLogo extends StatelessWidget {
   const AuthLogo({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const Image(
-      image: AssetImage('assets/images/logo_horizontal.png'),
-      width: 210,
-      alignment: Alignment.centerLeft,
-    );
-  }
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 class AuthHeading extends StatelessWidget {
@@ -83,28 +159,28 @@ class AuthHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: AppText.poppins(
-            fontSize: 27,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-            height: 1.2,
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        children: [
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: AppText.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+              height: 1.2,
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          subtitle,
-          style: AppText.inter(
-            fontSize: 14,
-            height: 1.4,
-            color: AppColors.textMuted,
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: AppText.inter(fontSize: 14, height: 1.45, color: AppColors.textMuted),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -144,7 +220,7 @@ InputDecoration authInputDecoration({
     hintText: hint,
     hintStyle: AppText.inter(fontSize: 15, color: AppColors.textFaint),
     filled: true,
-    fillColor: Colors.white,
+    fillColor: AppColors.chipBlueSoft,
     counterText: '',
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     prefixIcon: prefix ??

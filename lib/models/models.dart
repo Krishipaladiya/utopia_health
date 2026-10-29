@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+export 'patient_profile.dart';
 
 /// The API sends UTC timestamps without a "Z"; treat them as UTC.
 DateTime parseUtc(String s) {
@@ -47,6 +48,14 @@ class Patient {
     required this.complaint,
     this.lastRemedy,
     this.whatsAppConsent = true,
+    this.lastVisitAt,
+    this.email = '',
+    this.address = '',
+    this.relationship = 'Self',
+    this.familyDetails = '',
+    this.otherDiseases = '',
+    this.importantNote = '',
+    this.createdAt,
   });
 
   /// Database id (used by the API).
@@ -65,11 +74,39 @@ class Patient {
   /// Patient agreed to get prescriptions and reminders on WhatsApp.
   final bool whatsAppConsent;
 
+  final DateTime? lastVisitAt;
+  final String email;
+  final String address;
+
+  /// Relation to the owner of the mobile number: Self, Son, Wife...
+  final String relationship;
+  final String familyDetails;
+  final String otherDiseases;
+  final String importantNote;
+
+  /// When the clinic first registered the patient.
+  final DateTime? createdAt;
+
+  /// Only the 10 digits, for calling and searching.
+  String get localPhone {
+    final d = phone.replaceAll(RegExp(r'\D'), '');
+    return d.length > 10 ? d.substring(d.length - 10) : d;
+  }
+
   String get genderShort => gender == 'Male' ? 'M' : 'F';
 
   factory Patient.fromJson(Map<String, dynamic> j) {
     final last = j['lastVisitAt'] as String?;
+    final created = j['createdAt'] as String?;
     return Patient(
+      lastVisitAt: last == null ? null : parseUtc(last),
+      createdAt: created == null ? null : parseUtc(created),
+      email: (j['email'] as String?) ?? '',
+      address: (j['address'] as String?) ?? '',
+      relationship: (j['relationship'] as String?) ?? 'Self',
+      familyDetails: (j['familyDetails'] as String?) ?? '',
+      otherDiseases: (j['otherDiseases'] as String?) ?? '',
+      importantNote: (j['importantNote'] as String?) ?? '',
       dbId: j['id'] as int,
       id: j['code'] as String,
       name: j['name'] as String,
@@ -124,7 +161,7 @@ class QueueToken {
   }
 }
 
-enum RecordKind { prescription, photo }
+enum RecordKind { prescription, photo, document, note, voice }
 
 class RecordEntry {
   const RecordEntry({
@@ -135,10 +172,22 @@ class RecordEntry {
     required this.title,
     required this.body,
     this.delivery,
+    this.author,
+    this.mine = true,
+    this.seconds = 0,
   });
 
   final int id;
   final RecordKind kind;
+
+  /// Drop messages: who wrote it, e.g. "Dr Anand • Anand Clinic".
+  final String? author;
+
+  /// Written in this clinic (can be deleted here).
+  final bool mine;
+
+  /// Length of a voice message.
+  final int seconds;
   final String header;
   final String date;
   final String title;
@@ -164,10 +213,29 @@ class RecordEntry {
         delivery: j['whatsApp'] as String?,
       );
     }
+    if (j['kind'] == 'note' || j['kind'] == 'voice') {
+      final voice = j['kind'] == 'voice';
+      final mine = (j['mine'] as bool?) ?? true;
+      return RecordEntry(
+        id: j['id'] as int,
+        kind: voice ? RecordKind.voice : RecordKind.note,
+        header: voice ? 'Voice message • ${relativeTime(when)}' : 'Drop message • ${relativeTime(when)}',
+        date: shortDate(when),
+        title: voice ? 'Voice message' : 'Drop message',
+        body: (j['text'] as String?) ?? '',
+        author: mine ? 'You • ${j['doctorName']}' : '${j['doctorName']} • ${j['clinicName']}',
+        mine: mine,
+        seconds: (j['audioSeconds'] as int?) ?? 0,
+      );
+    }
+    final type = (j['contentType'] as String?) ?? '';
+    final name = (j['fileName'] as String?) ?? 'Attached report';
+    final isImage = type.startsWith('image/') ||
+        RegExp(r'\.(jpe?g|png|heic|webp|gif)$', caseSensitive: false).hasMatch(name);
     return RecordEntry(
       id: j['id'] as int,
-      kind: RecordKind.photo,
-      header: 'Photo Upload • ${relativeTime(when)}',
+      kind: isImage ? RecordKind.photo : RecordKind.document,
+      header: '${isImage ? 'Photo' : 'Document'} • ${relativeTime(when)}',
       date: shortDate(when),
       title: (j['fileName'] as String?) ?? 'Attached report',
       body: 'Uploaded by $clinicName',

@@ -158,7 +158,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _ => 'Verify your email',
     };
     final subtitle = switch (_step) {
-      _Step.phone => 'Just your mobile number and email. Our team sets up the rest for you.',
+      _Step.phone => 'Start in seconds with Google or Apple, or register with your mobile and email.',
       _Step.phoneCode => 'Enter the 6-digit code. It is checked automatically.',
       _Step.email => 'We will email you a 6-digit code.',
       _ => 'Enter the 6-digit code. It is checked automatically.',
@@ -172,6 +172,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         AuthHeading(title: title, subtitle: subtitle),
         const SizedBox(height: 22),
         if (_step == _Step.phone) ...[
+          const SocialButtons(caption: 'or register with mobile and email', dividerFirst: false),
           const FieldLabel('Mobile number'),
           PhoneField(
             controller: _phone,
@@ -187,8 +188,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             hint: 'The code is sent as soon as you enter all 10 digits.',
             retry: _validPhone ? _startPhone : null,
           ),
-          const SizedBox(height: 28),
-          const SocialButtons(caption: 'or start now with'),
         ],
         if (_step == _Step.phoneCode)
           OtpPanel(

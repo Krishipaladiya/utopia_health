@@ -54,6 +54,9 @@ class ApiException implements Exception {
         'social_not_configured' =>
           'This sign-in is not set up yet. Please use your mobile number.',
         'invalid_social_token' => 'Sign-in failed. Please try again.',
+        'empty_message' => 'Type a message first.',
+        'file_size_max_15mb' => 'The file is too big (15 MB max).',
+        'file_size_max_10mb' => 'The recording is too long.',
         'phone_in_use' => 'This number is already used by another account.',
         'network' => 'Cannot reach the server. Check your connection.',
         _ => message ?? 'Something went wrong. Please try again.',
@@ -127,13 +130,49 @@ class ApiClient {
         () => _http.post(_uri(path), headers: _headers, body: body == null ? null : jsonEncode(body)),
       );
 
+  Future<dynamic> delete(String path) => _send(() => _http.delete(_uri(path), headers: _headers));
+
+  /// Sends a file as multipart form data (field name "file").
+  Future<dynamic> upload(
+    String path,
+    String filePath, {
+    String? fileName,
+    Map<String, String> fields = const {},
+  }) {
+    return _send(() async {
+      final req = http.MultipartRequest('POST', _uri(path, fields))
+        ..headers.addAll({if (_token != null) 'Authorization': 'Bearer $_token'})
+        ..files.add(await http.MultipartFile.fromPath('file', filePath, filename: fileName));
+      return http.Response.fromStream(await _http.send(req));
+    }, timeout: const Duration(seconds: 90));
+  }
+
+  /// Downloads a file (image, document, voice) with the login token.
+  Future<List<int>> download(String path) async {
+    final http.Response res;
+    try {
+      res = await _http.get(_uri(path), headers: _headers).timeout(const Duration(seconds: 60));
+    } catch (_) {
+      throw ApiException(0, 'network');
+    }
+    if (res.statusCode != 200) throw ApiException(res.statusCode, 'http_${res.statusCode}');
+    return res.bodyBytes;
+  }
+
+  /// Full address and login header, for images and audio streamed from the API.
+  String url(String path) => '${ApiConfig.baseUrl}$path';
+  Map<String, String> get authHeaders => {if (_token != null) 'Authorization': 'Bearer $_token'};
+
   Future<dynamic> put(String path, Object body) =>
       _send(() => _http.put(_uri(path), headers: _headers, body: jsonEncode(body)));
 
-  Future<dynamic> _send(Future<http.Response> Function() call) async {
+  Future<dynamic> _send(
+    Future<http.Response> Function() call, {
+    Duration timeout = const Duration(seconds: 15),
+  }) async {
     final http.Response res;
     try {
-      res = await call().timeout(const Duration(seconds: 15));
+      res = await call().timeout(timeout);
     } catch (e) {
       debugPrint('API request failed: $e');
       throw ApiException(0, 'network');

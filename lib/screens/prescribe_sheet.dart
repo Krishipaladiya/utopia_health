@@ -166,7 +166,6 @@ class _PrescribeSheetState extends State<_PrescribeSheet> {
       _search.clear();
       _results = [];
     });
-    _searchFocus.requestFocus();
   }
 
   Future<void> _dispatch() async {
@@ -250,7 +249,6 @@ class _PrescribeSheetState extends State<_PrescribeSheet> {
       child: TextField(
         controller: _search,
         focusNode: _searchFocus,
-        autofocus: true,
         onChanged: _onQueryChanged,
         textInputAction: TextInputAction.search,
         style: AppText.inter(fontSize: 16, fontWeight: FontWeight.w500),

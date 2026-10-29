@@ -12,6 +12,7 @@ class DoctorProfile extends ChangeNotifier {
   String clinic = 'Shri Hari Clinic';
   String regNo = 'G-12345';
   String phone = '+91 98250 14820';
+  String email = '';
   int fee = 300;
   int experienceYears = 12;
   String languages = 'Gujarati, Hindi, English';
@@ -31,11 +32,12 @@ class DoctorProfile extends ChangeNotifier {
   }
 
   /// Short line used under the clinic name in headers.
-  String get headerLine => '$name, $qualification';
+  String get headerLine => qualification.isEmpty ? name : '$name, $qualification';
 
   void applyJson(Map<String, dynamic> j) {
     name = j['name'] as String;
     phone = j['phone'] as String;
+    email = (j['email'] as String?) ?? '';
     qualification = j['qualification'] as String;
     speciality = (j['speciality'] as String?) ?? '';
     clinic = (j['clinicName'] as String?) ?? clinic;

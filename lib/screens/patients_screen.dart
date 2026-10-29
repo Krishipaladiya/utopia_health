@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../data/clinic_store.dart';
 import '../models/models.dart';
+import '../services/patient_actions.dart';
 import '../widgets/common.dart';
 import 'add_patient_sheet.dart';
 import 'patient_record_screen.dart';
@@ -22,12 +23,24 @@ class _PatientsScreenState extends State<PatientsScreen> {
 
   List<Patient> get _visible {
     final q = _query.trim().toLowerCase();
+    final phoneCount = <String, int>{};
+    for (final p in clinic.patients) {
+      phoneCount[p.phone] = (phoneCount[p.phone] ?? 0) + 1;
+    }
+    final monthAgo = DateTime.now().subtract(const Duration(days: 30));
     return clinic.patients.where((p) {
+      if (_filter == 'Recent Visits' && (p.lastVisitAt == null || p.lastVisitAt!.isBefore(monthAgo))) {
+        return false;
+      }
+      if (_filter == 'Family Folders' && (phoneCount[p.phone] ?? 0) < 2) return false;
       if (q.isEmpty) return true;
       return p.name.toLowerCase().contains(q) ||
           p.phone.replaceAll(' ', '').contains(q.replaceAll(' ', '')) ||
           p.id.toLowerCase().contains(q);
-    }).toList();
+    }).toList()
+      ..sort((a, b) => _filter == 'Family Folders'
+          ? a.phone.compareTo(b.phone)
+          : (b.lastVisitAt ?? DateTime(2000)).compareTo(a.lastVisitAt ?? DateTime(2000)));
   }
 
   @override
@@ -106,19 +119,12 @@ class _PatientsScreenState extends State<PatientsScreen> {
                         ),
                       ),
                     ),
-                    FilledButton.icon(
-                      onPressed: () => showAddPatientSheet(context),
-                      icon: const Icon(
-                        Icons.person_add_alt_1_rounded,
-                        size: 18,
-                      ),
-                      label: const Text('New Patient'),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   onChanged: (v) => setState(() => _query = v),
+                  onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
                   style: AppText.inter(fontSize: 15),
                   decoration: InputDecoration(
                     contentPadding: const EdgeInsets.symmetric(vertical: 16),
@@ -190,10 +196,20 @@ class _PatientsScreenState extends State<PatientsScreen> {
                       ),
                     ),
                   ),
-                for (final patient in patients)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _PatientTile(patient: patient),
+                for (final (i, patient) in patients.indexed)
+                  TweenAnimationBuilder<double>(
+                    key: ValueKey(patient.dbId),
+                    tween: Tween(begin: 0, end: 1),
+                    duration: Duration(milliseconds: 280 + (i < 8 ? i * 40 : 0)),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, t, child) => Opacity(
+                      opacity: t,
+                      child: Transform.translate(offset: Offset(0, 16 * (1 - t)), child: child),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _PatientTile(patient: patient),
+                    ),
                   ),
               ],
             ),
@@ -291,7 +307,7 @@ class _PatientTile extends StatelessWidget {
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
-              onTap: () {},
+              onTap: () => callPatient(context, patient),
               child: const Padding(
                 padding: EdgeInsets.all(12),
                 child: Icon(

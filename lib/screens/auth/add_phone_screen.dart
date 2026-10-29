@@ -84,9 +84,6 @@ class _AddPhoneScreenState extends State<AddPhoneScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
-          const AuthLogo(),
-          const SizedBox(height: 32),
           AuthHeading(
             title: _otpStep ? 'Verify your number' : 'Add your mobile',
             subtitle: _otpStep
