@@ -1,0 +1,54 @@
+# Builds the iPhone app on Codemagic's Mac and sends it to TestFlight.
+# Set up once: see DEPLOY_STEPS.md (steps 20 to 27) and IOS_SIGNING.md.
+workflows:
+  ios-testflight:
+    name: iPhone to TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    integrations:
+      # The name you give the App Store Connect API key in Codemagic (Team settings -> Integrations).
+      app_store_connect: Utopia Health
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      vars:
+        BUNDLE_ID: com.utopia.utopiaHealth
+        # Your server address (https). Change when the domain changes.
+        API_BASE: https://utopiahealth.cloudverve.in
+        # Optional, only for Google sign-in:
+        # GOOGLE_CLIENT_ID: xxxx.apps.googleusercontent.com
+      # CERTIFICATE_PRIVATE_KEY must be added in the Codemagic app settings as a SECURE variable
+      # (see IOS_SIGNING.md in D:TOPIAHEALTH). Codemagic uses it to create your Apple Distribution certificate.
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+
+      - name: Set up iOS signing (creates certificate and profile if missing)
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build the iPhone app
+        script: |
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist \
+            --build-number=$BUILD_NUMBER \
+            --dart-define=API_BASE=$API_BASE \
+            --dart-define=GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
