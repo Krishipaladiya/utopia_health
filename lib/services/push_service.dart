@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/clinic_store.dart';
+import '../firebase_options.dart';
 import '../screens/notifications_screen.dart';
 import 'api_client.dart';
 import 'app_navigator.dart';
@@ -32,7 +33,12 @@ class PushService {
     if (!_supported || _started) return;
 
     try {
-      if (Firebase.apps.isEmpty) await Firebase.initializeApp();
+      final options = DefaultFirebaseOptions.currentPlatform;
+      if (options == null) {
+        debugPrint('Push is off: fill lib/firebase_options.dart');
+        return;
+      }
+      if (Firebase.apps.isEmpty) await Firebase.initializeApp(options: options);
     } catch (e) {
       debugPrint('Push is off (Firebase config files not added yet): $e');
       return;
