@@ -73,7 +73,7 @@ class ClinicStore extends ChangeNotifier {
   Future<void> refreshFinance() async {
     try {
       final results = await Future.wait([
-        api.get('/api/finance/ledger', query: {'take': '50'}),
+        api.get('/api/finance/ledger', query: {'take': '200', 'period': period}),
         api.get('/api/finance/summary', query: {'period': period}),
         api.get('/api/finance/summary', query: {'period': 'today'}),
       ]);
@@ -135,7 +135,7 @@ class ClinicStore extends ChangeNotifier {
     String? complaint,
     required bool addToQueue,
     bool whatsAppConsent = true,
-    Map<String, String> details = const {},
+    Map<String, Object> details = const {},
   }) async {
     final data = await api.post('/api/patients', {
       ...details,
@@ -192,8 +192,8 @@ class ClinicStore extends ChangeNotifier {
     await api.delete('/api/notes/$id');
   }
 
-  Future<void> uploadFile(Patient patient, String path, {String? fileName}) async {
-    await api.upload('/api/patients/${patient.dbId}/files', path, fileName: fileName);
+  Future<void> uploadFile(Patient patient, PickedUpload file) async {
+    await api.uploadPicked('/api/patients/${patient.dbId}/files', file);
   }
 
   Future<List<RecordEntry>> records(Patient patient, String clinicName) async {
@@ -205,11 +205,12 @@ class ClinicStore extends ChangeNotifier {
 
   // ---- prescriptions -----------------------------------------------------
 
-  /// Returns the WhatsApp status: Queued, or Skipped if the patient has not agreed.
-  Future<String?> prescribe(
+  /// Returns the new prescription's id and the WhatsApp status
+  /// (Queued, or Skipped if the patient has not agreed).
+  Future<({int id, String? whatsApp})> prescribe(
     Patient patient,
     List<Map<String, String>> items, {
-    bool sendWhatsApp = true,
+    bool sendWhatsApp = false,
     String notes = '',
   }) async {
     final data = await api.post('/api/patients/${patient.dbId}/prescriptions', {
@@ -218,7 +219,14 @@ class ClinicStore extends ChangeNotifier {
       'sendWhatsApp': sendWhatsApp,
     }) as Map<String, dynamic>;
     await refreshPatients();
-    return data['whatsApp'] as String?;
+    return (id: data['id'] as int, whatsApp: data['whatsApp'] as String?);
+  }
+
+  /// Private link to the printable prescription and a WhatsApp link that opens
+  /// a chat with the patient, message filled in.
+  Future<String> shareLink(int prescriptionId) async {
+    final data = await api.post('/api/prescriptions/$prescriptionId/share') as Map<String, dynamic>;
+    return data['whatsAppUrl'] as String;
   }
 
   Future<String?> resendPrescription(int prescriptionId) async {
@@ -244,6 +252,12 @@ class ClinicStore extends ChangeNotifier {
       'amount': amount,
       'mode': mode,
     });
+    await refreshFinance();
+  }
+
+  /// Removes a fee or spend added by mistake.
+  Future<void> deleteLedger(LedgerEntry entry) async {
+    await api.delete('/api/finance/ledger/${entry.id}');
     await refreshFinance();
   }
 

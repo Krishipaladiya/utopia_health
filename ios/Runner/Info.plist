@@ -2,30 +2,30 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 	<dict>
-	<key>GIDClientID</key>
-	<string>40549200434-frs420g5jkcv6fjsckojbp3efe01mg9e.apps.googleusercontent.com</string>
-	<key>CFBundleURLTypes</key>
-	<array>
+		<key>GIDClientID</key>
+		<string>40549200434-frs420g5jkcv6fjsckojbp3efe01mg9e.apps.googleusercontent.com</string>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<string>com.googleusercontent.apps.40549200434-frs420g5jkcv6fjsckojbp3efe01mg9e</string>
+				</array>
+			</dict>
+		</array>
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>remote-notification</string>
+		</array>
+		<key>NSAppTransportSecurity</key>
 		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>com.googleusercontent.apps.40549200434-frs420g5jkcv6fjsckojbp3efe01mg9e</string>
-			</array>
+			<key>NSAllowsLocalNetworking</key>
+			<true/>
 		</dict>
-	</array>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-	</array>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>CFBundleDevelopmentRegion</key>
@@ -93,14 +93,16 @@
 		<key>UIStatusBarHidden</key>
 		<false/>
 		<key>NSCameraUsageDescription</key>
-	<string>Take photos of reports and prescriptions for the patient record.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Attach report images from your photos to the patient record.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Record voice messages for the patient record.</string>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>tel</string>
-	</array>
-</dict>
+		<string>Take photos of reports and prescriptions for the patient record.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Attach report images from your photos to the patient record.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Record voice messages for the patient record.</string>
+		<key>LSApplicationQueriesSchemes</key>
+		<array>
+			<string>tel</string>
+		</array>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>Show clinics and health camps near you.</string>
+	</dict>
 </plist>

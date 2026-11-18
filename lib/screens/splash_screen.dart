@@ -6,8 +6,10 @@ import '../core/app_theme.dart';
 import '../services/auth_service.dart';
 import '../widgets/wave_background.dart';
 import 'auth/add_phone_screen.dart';
+import '../models/network.dart';
+import 'auth/auth_flow.dart';
+import 'auth/pin_screens.dart';
 import 'auth/login_screen.dart';
-import 'home_shell.dart';
 
 /// Launch screen: the logo grows in, the waves rise, then the app opens
 /// on Home (signed in) or Login.
@@ -47,15 +49,20 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     ]);
     if (!mounted) return;
     final loggedIn = results.first as bool;
+    // Not signed in but a PIN is saved on this phone: unlock with it.
+    final pins = loggedIn ? const <SavedPin>[] : await auth.savedPins();
+    if (!mounted) return;
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 600),
-        pageBuilder: (_, _, _) => !loggedIn
+        pageBuilder: (_, _, _) => !loggedIn && pins.isNotEmpty
+            ? PinUnlockScreen(pins: pins)
+            : !loggedIn
             ? const LoginScreen()
             : auth.needsPhone
                 ? const AddPhoneScreen()
-                : const HomeShell(),
+                : homeForRole(),
         transitionsBuilder: (_, animation, _, child) {
           final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
           return FadeTransition(
@@ -91,7 +98,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   opacity: _logoFade,
                   child: ScaleTransition(
                     scale: _logoScale,
-                    child: const Image(image: AssetImage('assets/images/logo_stacked.png'), width: 230),
+                    child: const Image(image: AssetImage('assets/images/logo_stacked.png'), width: 160),
                   ),
                 ),
                 const SizedBox(height: 18),

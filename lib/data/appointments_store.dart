@@ -87,6 +87,12 @@ class AppointmentsStore extends ChangeNotifier {
     await refresh();
   }
 
+  /// A request from the patient app: confirm or decline it (the patient is told).
+  Future<void> decide(Appointment a, {required bool approve}) async {
+    await api.post('/api/appointments/${a.id}/${approve ? 'approve' : 'decline'}');
+    await refresh();
+  }
+
   Future<void> cancel(Appointment a) async {
     await api.post('/api/appointments/${a.id}/cancel');
     await refresh();

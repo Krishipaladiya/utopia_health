@@ -9,8 +9,9 @@ import '../services/api_client.dart';
 
 /// Full-height prescription window. It opens blank: search a medicine, set the
 /// dose, add it, and repeat. Nothing is pre-filled.
-Future<void> showPrescribeSheet(BuildContext context, Patient patient) {
-  return showModalBottomSheet<void>(
+/// Returns the new prescription's id, or null when closed without sending.
+Future<int?> showPrescribeSheet(BuildContext context, Patient patient) {
+  return showModalBottomSheet<int>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -51,7 +52,8 @@ class _PrescribeSheet extends StatefulWidget {
 }
 
 class _PrescribeSheetState extends State<_PrescribeSheet> {
-  static const _pillOptions = [2, 4, 6, 8, 10, 12];
+  /// Half and quarter doses are common for children and sensitive patients.
+  static const _pillOptions = ['¼', '½', '1', '1½', '2', '4', '6', '8', '10', '12'];
   static const _courseOptions = [3, 7, 14, 30];
   static const _times = {
     'Dawn': Icons.wb_twilight_rounded,
@@ -73,7 +75,7 @@ class _PrescribeSheetState extends State<_PrescribeSheet> {
   // The medicine being configured. Everything starts empty.
   Remedy? _selected;
   String? _potency;
-  int? _pills;
+  String? _pills;
   final Set<String> _selectedTimes = {};
   String? _food;
   int? _course;
@@ -108,12 +110,17 @@ class _PrescribeSheetState extends State<_PrescribeSheet> {
   Future<void> _runSearch(String q) async {
     final seq = ++_searchSeq;
     try {
-      final data = await api.get('/api/remedies', query: {'q': q, 'take': '30'}) as Map<String, dynamic>;
+      // Homeopathy remedies first, then allopathy brands (India) by name or salt.
+      final found = await Future.wait([
+        api.get('/api/remedies', query: {'q': q, 'take': '30'}),
+        api.get('/api/medicines', query: {'q': q, 'take': '25'}).catchError((_) => <dynamic>[]),
+      ]);
       if (!mounted || seq != _searchSeq) return; // a newer search is running
       setState(() {
-        _results = (data['items'] as List)
-            .map((e) => Remedy.fromJson(e as Map<String, dynamic>))
-            .toList();
+        _results = [
+          ...((found[0] as Map<String, dynamic>)['items'] as List).map((e) => Remedy.fromJson(e as Map<String, dynamic>)),
+          ...(found[1] as List).map((e) => Remedy.fromMedicine(e as Map<String, dynamic>)),
+        ];
         _searching = false;
         _searchError = null;
       });
@@ -157,7 +164,7 @@ class _PrescribeSheetState extends State<_PrescribeSheet> {
       _items.add(
         _RxItem(
           name: _potency == null ? r.name : '${r.name} $_potency',
-          dose: '$_pills Pills',
+          dose: _pills == '1' || _pills == '½' || _pills == '¼' ? '$_pills Pill' : '$_pills Pills',
           timing: _food == null ? order : '$order ($_food)',
           course: _course == null ? 'As advised' : '$_course Days',
         ),
@@ -174,13 +181,13 @@ class _PrescribeSheetState extends State<_PrescribeSheet> {
     final navigator = Navigator.of(context);
     setState(() => _sending = true);
     try {
-      final status = await clinic.prescribe(widget.patient, [
+      final result = await clinic.prescribe(widget.patient, [
         for (final i in _items)
           {'name': i.name, 'dose': i.dose, 'timing': i.timing, 'course': i.course},
       ]);
-      navigator.pop();
+      navigator.pop(result.id);
       messenger.showSnackBar(
-        SnackBar(content: Text(whatsAppResultMessage(status, widget.patient.name))),
+        SnackBar(content: Text(whatsAppResultMessage(result.whatsApp, widget.patient.name))),
       );
     } on ApiException catch (e) {
       if (mounted) setState(() => _sending = false);
@@ -403,13 +410,13 @@ class _PrescribeSheetState extends State<_PrescribeSheet> {
               ],
             ),
           ],
-          _label('Dose (pills)'),
+          _label('Dose (pills, ½ = half)'),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
               for (final n in _pillOptions)
-                _Choice(label: '$n', selected: _pills == n, onTap: () => setState(() => _pills = n)),
+                _Choice(label: n, selected: _pills == n, onTap: () => setState(() => _pills = n)),
             ],
           ),
           _label('When'),

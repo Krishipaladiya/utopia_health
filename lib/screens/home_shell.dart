@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/app_theme.dart';
+import '../widgets/notify_banner.dart';
 import '../data/clinic_store.dart';
 import '../models/models.dart';
 import '../services/auth_service.dart';
@@ -53,41 +53,12 @@ class _HomeShellState extends State<HomeShell>
   /// In-app banner for events that arrive while the app is open.
   void _showBanner(AppNotification n) {
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.textPrimary,
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 84),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        duration: const Duration(seconds: 5),
-        content: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              n.title,
-              style: AppText.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              n.body,
-              style: AppText.inter(fontSize: 12.5, color: Colors.white70),
-            ),
-          ],
-        ),
-        action: SnackBarAction(
-          label: 'View',
-          textColor: AppColors.aqua,
-          onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-          ),
-        ),
+    showNotifyBanner(
+      title: n.title,
+      body: n.body,
+      kind: n.type,
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const NotificationsScreen()),
       ),
     );
   }

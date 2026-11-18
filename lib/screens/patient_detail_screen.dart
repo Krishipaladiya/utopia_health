@@ -228,6 +228,26 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         ),
                     ],
                   ),
+                  if (profile != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: SoftCard(
+                        padding: EdgeInsets.zero,
+                        child: SwitchListTile(
+                          value: profile.sharingConsent,
+                          onChanged: (v) async {
+                            if (await runAction(context, () => api.put('/api/patients/${p.dbId}/sharing', {'granted': v}))) _load();
+                          },
+                          secondary: const Icon(Icons.share_outlined, color: AppColors.primaryDark),
+                          title: const Text('Patient agrees to share between doctors'),
+                          subtitle: Text(
+                            profile.sharingConsent
+                                ? 'Other doctors who treat this patient can see shared notes and visits.'
+                                : 'Off: notes and visits stay in your clinic. Turn on only with the patient\'s permission.',
+                          ),
+                        ),
+                      ),
+                    ),
                   _Card(
                     icon: Icons.route_outlined,
                     title: 'Doctors visited',

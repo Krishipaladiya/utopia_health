@@ -7,7 +7,7 @@ import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../services/social_sign_in.dart';
 import 'add_phone_screen.dart';
-import 'auth_flow.dart';
+import 'pin_screens.dart';
 
 /// "Continue with Google / Apple". A new doctor gets an account at once.
 /// [dividerFirst] puts the "or" line above the buttons (login), otherwise
@@ -43,7 +43,7 @@ class _SocialButtonsState extends State<SocialButtons> {
           (_) => false,
         );
       } else {
-        enterApp(context);
+        await finishLogin(context);
       }
     } on ApiException catch (e) {
       messenger.hideCurrentSnackBar();

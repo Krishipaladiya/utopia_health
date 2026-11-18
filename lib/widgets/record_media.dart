@@ -3,11 +3,13 @@ import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_theme.dart';
 import '../data/clinic_store.dart';
@@ -46,34 +48,13 @@ Future<bool> pickAndUpload(BuildContext context, Patient patient) async {
   );
   if (choice == null || !context.mounted) return false;
 
-  String? path;
-  String? name;
-  try {
-    if (choice == 'document') {
-      final file = await FilePicker.pickFile(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'jpg', 'jpeg', 'png'],
-      );
-      path = file?.path;
-      name = file?.name;
-    } else {
-      final image = await ImagePicker().pickImage(
-        source: choice == 'camera' ? ImageSource.camera : ImageSource.gallery,
-        imageQuality: 80,
-        maxWidth: 2000,
-      );
-      path = image?.path;
-      name = image?.name;
-    }
-  } catch (e) {
-    debugPrint('Pick failed: $e');
-  }
-  if (path == null || !context.mounted) return false;
+  final file = await pickUpload(choice);
+  if (file == null || !context.mounted) return false;
 
   final messenger = ScaffoldMessenger.of(context);
   messenger.showSnackBar(const SnackBar(content: Text('Uploading...'), duration: Duration(seconds: 30)));
   try {
-    await clinic.uploadFile(patient, path, fileName: name);
+    await clinic.uploadFile(patient, file);
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(const SnackBar(content: Text('Added to the record')));
     return true;
@@ -114,6 +95,37 @@ class _PickOption extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Opens the camera, gallery, a document or a video picker.
+/// [source] is camera, gallery, video or document. Returns null when cancelled.
+Future<PickedUpload?> pickUpload(String source) async {
+  try {
+    if (source == 'document' || source == 'video') {
+      final file = await FilePicker.pickFile(
+        type: source == 'video' ? FileType.video : FileType.custom,
+        allowedExtensions: source == 'video'
+            ? null
+            : ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'jpg', 'jpeg', 'png'],
+      );
+      if (file == null) return null;
+      if (kIsWeb || file.path == null) {
+        return PickedUpload(name: file.name, bytes: await file.readAsBytes());
+      }
+      return PickedUpload(name: file.name, path: file.path);
+    }
+    final image = await ImagePicker().pickImage(
+      source: source == 'camera' ? ImageSource.camera : ImageSource.gallery,
+      imageQuality: 80,
+      maxWidth: 2000,
+    );
+    if (image == null) return null;
+    if (kIsWeb) return PickedUpload(name: image.name, bytes: await image.readAsBytes());
+    return PickedUpload(name: image.name, path: image.path);
+  } catch (e) {
+    debugPrint('Pick failed: $e');
+    return null;
   }
 }
 
@@ -170,8 +182,31 @@ void openImage(BuildContext context, int fileId, String title) {
   );
 }
 
+/// Opens a file from the API: on phones it downloads and opens the viewer,
+/// on the web it opens in a new tab (the login token goes in the link).
+Future<void> openRemoteFile(BuildContext context, String apiPath, String fileName) async {
+  final messenger = ScaffoldMessenger.of(context);
+  if (kIsWeb) {
+    await launchUrl(Uri.parse('${api.url(apiPath)}?access_token=${api.token ?? ''}'), webOnlyWindowName: '_blank');
+    return;
+  }
+  try {
+    final bytes = await api.download(apiPath);
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/$fileName');
+    await file.writeAsBytes(bytes);
+    final result = await OpenFilex.open(file.path);
+    if (result.type != ResultType.done) {
+      messenger.showSnackBar(SnackBar(content: Text('No app to open $fileName')));
+    }
+  } on ApiException catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(e.friendly)));
+  }
+}
+
 /// Downloads a document and opens it in the phone's viewer.
 Future<void> openDocument(BuildContext context, int fileId, String fileName) async {
+  if (kIsWeb) return openRemoteFile(context, '/api/files/$fileId', fileName);
   final messenger = ScaffoldMessenger.of(context);
   try {
     final bytes = await api.download('/api/files/$fileId');

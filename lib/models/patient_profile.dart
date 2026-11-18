@@ -116,6 +116,7 @@ class PatientProfile {
     required this.visits,
     required this.prescriptions,
     required this.files,
+    this.sharingConsent = false,
   });
 
   final Patient patient;
@@ -125,6 +126,9 @@ class PatientProfile {
   final int prescriptions;
   final int files;
 
+  /// The patient agreed to share between their doctors.
+  final bool sharingConsent;
+
   factory PatientProfile.fromJson(Map<String, dynamic> j) => PatientProfile(
         patient: Patient.fromJson(j['patient'] as Map<String, dynamic>),
         family: (j['family'] as List).map((e) => FamilyMember.fromJson(e as Map<String, dynamic>)).toList(),
@@ -132,6 +136,7 @@ class PatientProfile {
         visits: j['visits'] as int,
         prescriptions: j['prescriptions'] as int,
         files: j['files'] as int,
+        sharingConsent: (j['sharingConsent'] as bool?) ?? false,
       );
 }
 

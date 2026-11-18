@@ -7,6 +7,7 @@ import '../data/clinic_store.dart';
 import '../firebase_options.dart';
 import '../screens/notifications_screen.dart';
 import 'api_client.dart';
+import 'session.dart';
 import 'app_navigator.dart';
 import 'notification_service.dart';
 
@@ -78,7 +79,7 @@ class PushService {
     _token = token;
     if (!api.hasSession) return;
     try {
-      await api.post('/api/devices', {
+      await api.post(session.isClinicTeam ? '/api/devices' : '/api/devices/inbox', {
         'token': token,
         'platform': defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
       });

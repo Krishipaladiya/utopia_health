@@ -4,6 +4,8 @@ import 'package:signalr_netcore/signalr_client.dart';
 import '../data/appointments_store.dart';
 import '../data/clinic_store.dart';
 import 'api_client.dart';
+import 'session.dart';
+import '../data/network_stores.dart';
 
 /// Live connection to the .NET SignalR hub. When the server reports a change
 /// the matching part of [clinic] is refreshed, so every screen updates by
@@ -35,11 +37,19 @@ class RealtimeService {
     hub.on('patients.changed', (_) => clinic.refreshPatients());
     hub.on('ledger.changed', (_) => clinic.refreshFinance());
     hub.on('appointments.changed', (_) => appointments.refresh());
+    hub.on('facility.changed', (_) => facilityStore.refresh());
     hub.on('notification.created', (args) {
       if (args == null || args.isEmpty) return;
       final payload = args.first;
-      if (payload is Map) {
-        notifications.addFromServer(Map<String, dynamic>.from(payload));
+      if (payload is! Map) return;
+      final json = Map<String, dynamic>.from(payload);
+      if (session.isClinicTeam) {
+        notifications.addFromServer(json);
+      } else {
+        inbox.addFromServer(json);
+        // A patient's turn, prescription or report changes what the app shows.
+        if (session.isPatient) patientStore.loadAll();
+        if (session.isFacility) facilityStore.refresh();
       }
     });
 
@@ -47,8 +57,14 @@ class RealtimeService {
     hub.onreconnected(({connectionId}) {
       connected.value = true;
       // Events may have been missed while offline.
-      clinic.loadAll();
-      appointments.refresh();
+      if (session.isPatient) {
+        patientStore.loadAll();
+      } else if (session.isFacility) {
+        facilityStore.loadAll();
+      } else {
+        clinic.loadAll();
+        appointments.refresh();
+      }
     });
 
     _hub = hub;

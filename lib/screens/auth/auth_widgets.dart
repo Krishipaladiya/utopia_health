@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/app_theme.dart';
+import '../../models/network.dart';
 
 /// Page frame shared by login and register: soft brand header with the logo,
 /// then the form on a white card that slides up.
@@ -70,7 +71,7 @@ class AuthScaffold extends StatelessWidget {
                           delay: 0,
                           child: Image(
                             image: AssetImage('assets/images/logo_horizontal.png'),
-                            width: 200,
+                            width: 190,
                           ),
                         ),
                         const SizedBox(height: 26),
@@ -243,8 +244,10 @@ class AuthTextField extends StatelessWidget {
     this.keyboardType,
     this.textCapitalization = TextCapitalization.words,
     this.onChanged,
+    this.autofillHints,
   });
 
+  final Iterable<String>? autofillHints;
   final TextEditingController controller;
   final String hint;
   final IconData? icon;
@@ -258,6 +261,7 @@ class AuthTextField extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       textCapitalization: textCapitalization,
+      autofillHints: autofillHints,
       onChanged: onChanged,
       style: AppText.inter(fontSize: 15, fontWeight: FontWeight.w500),
       decoration: authInputDecoration(hint: hint, icon: icon),
@@ -281,8 +285,9 @@ class PhoneField extends StatelessWidget {
       controller: controller,
       onChanged: onChanged,
       keyboardType: TextInputType.phone,
+      autofillHints: const [AutofillHints.telephoneNumberNational, AutofillHints.telephoneNumber],
       maxLength: 10,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      inputFormatters: [_LastTenDigits()],
       style: AppText.inter(
         fontSize: 16,
         fontWeight: FontWeight.w600,
@@ -422,6 +427,18 @@ class _OtpPanelState extends State<OtpPanel> {
   bool get _complete => _code.length == _length;
 
   void _onDigit(int i, String value) {
+    // The keyboard's "From Messages" suggestion (or a paste) fills all six at once.
+    if (value.length > 1) {
+      final digits = value.replaceAll(RegExp(r'\D'), '');
+      for (var k = i; k < _length; k++) {
+        final at = k - i;
+        _controllers[k].text = at < digits.length ? digits[at] : '';
+      }
+      _nodes[(i + digits.length).clamp(0, _length - 1)].requestFocus();
+      setState(() => _error = null);
+      if (_complete && !_busy) _submit();
+      return;
+    }
     if (value.isNotEmpty && i < _length - 1) {
       _nodes[i + 1].requestFocus();
     }
@@ -526,8 +543,11 @@ class _OtpPanelState extends State<OtpPanel> {
                     focusNode: _nodes[i],
                     textAlign: TextAlign.center,
                     keyboardType: TextInputType.number,
-                    maxLength: 1,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    autofillHints: i == 0 ? const [AutofillHints.oneTimeCode] : null,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(i == 0 ? _length : 1),
+                    ],
                     onChanged: (v) => _onDigit(i, v),
                     style: AppText.poppins(
                       fontSize: 22,
@@ -610,4 +630,75 @@ class _OtpPanelState extends State<OtpPanel> {
       ],
     );
   }
+}
+
+/// Keeps the last 10 digits, so an autofilled "+91 98250 14820" becomes 9825014820.
+class _LastTenDigits extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    var digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.length > 10) digits = digits.substring(digits.length - 10);
+    return TextEditingValue(text: digits, selection: TextSelection.collapsed(offset: digits.length));
+  }
+}
+
+/// Shown when one mobile number opens several accounts (e.g. a doctor who
+/// also works with a lab). Returns the chosen one.
+Future<LoginChoice?> showAccountChooser(BuildContext context, List<LoginChoice> choices) {
+  IconData icon(String role) => switch (role) {
+        'doctor' => Icons.medical_services_outlined,
+        'reception' => Icons.support_agent_rounded,
+        'clinic' => Icons.local_pharmacy_outlined,
+        'lab' => Icons.biotech_outlined,
+        _ => Icons.favorite_outline_rounded,
+      };
+  String label(String role) => switch (role) {
+        'doctor' => 'Doctor',
+        'reception' => 'Front desk',
+        'clinic' => 'Partner clinic',
+        'lab' => 'Laboratory',
+        _ => 'Patient',
+      };
+  return showModalBottomSheet<LoginChoice>(
+    context: context,
+    showDragHandle: true,
+    backgroundColor: Colors.white,
+    builder: (context) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Continue as', style: AppText.poppins(fontSize: 19, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(
+              'This number has more than one account.',
+              style: AppText.inter(fontSize: 13, color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 12),
+            for (final c in choices)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Material(
+                  color: AppColors.chipBlueSoft,
+                  borderRadius: BorderRadius.circular(18),
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    leading: CircleAvatar(
+                      backgroundColor: AppColors.mint,
+                      child: Icon(icon(c.role), color: AppColors.primaryDark),
+                    ),
+                    title: Text(label(c.role), style: AppText.poppins(fontSize: 15, fontWeight: FontWeight.w600)),
+                    subtitle: Text('${c.name} • ${c.place}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () => Navigator.pop(context, c),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
 }

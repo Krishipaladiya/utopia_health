@@ -4,7 +4,7 @@ import '../../core/app_theme.dart';
 import '../../data/doctor_store.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
-import 'auth_flow.dart';
+import 'pin_screens.dart';
 import 'auth_widgets.dart';
 import 'login_screen.dart';
 
@@ -43,8 +43,16 @@ class _AddPhoneScreenState extends State<AddPhoneScreen> {
     }
   }
 
+  /// SMS connected: send a code. Not yet: save the number straight away.
   Future<void> _sendOtp() async {
     if (_sending) return;
+    final methods = await auth.methods();
+    if (methods['sms'] != true) {
+      final error = await _verify('');
+      if (mounted && error != null) setState(() => _error = error);
+      return;
+    }
+    if (!mounted) return;
     FocusScope.of(context).unfocus();
     setState(() {
       _sending = true;
@@ -62,7 +70,7 @@ class _AddPhoneScreenState extends State<AddPhoneScreen> {
   Future<String?> _verify(String code) async {
     try {
       await auth.addPhone(_phone.text, code, clinicName: _clinic.text);
-      if (mounted) enterApp(context, newlyRegistered: true);
+      if (mounted) await finishLogin(context, newlyRegistered: true);
       return null;
     } on ApiException catch (e) {
       return e.friendly;

@@ -268,6 +268,21 @@ class Remedy {
   final List<String> potencies;
   final bool favorite;
 
+  /// An allopathy brand from the India medicine list: salts shown as the
+  /// common name, no potencies.
+  factory Remedy.fromMedicine(Map<String, dynamic> j) {
+    final form = (j['form'] as String?) ?? '';
+    final price = (j['price'] as num?) ?? 0;
+    return Remedy(
+      name: j['name'] as String,
+      common: (j['composition'] as String?) ?? '',
+      type: 'Allopathy${form.isEmpty || form == 'other' ? '' : ' • $form'}${price > 0 ? ' • ₹${price.toStringAsFixed(0)}' : ''}',
+      family: j['maker'] as String?,
+      affinity: j['pack'] as String?,
+      potencies: const [],
+    );
+  }
+
   factory Remedy.fromJson(Map<String, dynamic> j) => Remedy(
         name: j['name'] as String,
         common: j['common'] as String,
@@ -283,18 +298,24 @@ class Remedy {
 
 class LedgerEntry {
   const LedgerEntry({
+    required this.id,
     required this.title,
     required this.subtitle,
     required this.amount,
     required this.isIncome,
     required this.note,
     required this.icon,
+    required this.mode,
     this.tag,
   });
 
+  final int id;
   final String title;
   final String subtitle;
   final String? tag;
+
+  /// Cash, UPI (GPay), Card...
+  final String mode;
   final int amount;
   final bool isIncome;
   final String note;
@@ -309,6 +330,8 @@ class LedgerEntry {
             ? Icons.currency_rupee_rounded
             : Icons.payments_outlined;
     return LedgerEntry(
+      id: j['id'] as int,
+      mode: mode,
       title: j['title'] as String,
       subtitle: j['subtitle'] as String,
       tag: j['tag'] as String?,
@@ -337,6 +360,7 @@ class AppNotification {
     required this.body,
     required this.time,
     this.read = false,
+    this.type = '',
   });
 
   final int id;
@@ -345,6 +369,9 @@ class AppNotification {
   final String body;
   final DateTime time;
   bool read;
+
+  /// Kind as the server sent it (turn, lab, medicine...), for icons and banners.
+  final String type;
 
   factory AppNotification.fromJson(Map<String, dynamic> j) {
     // SignalR sends camelCase keys with an upper-case first letter removed;
@@ -356,6 +383,7 @@ class AppNotification {
       body: j['body'] as String,
       time: parseUtc(j['createdAt'] as String),
       read: (j['read'] as bool?) ?? false,
+      type: j['kind'] as String,
     );
   }
 }
@@ -366,6 +394,7 @@ class FinanceSummary {
     required this.income,
     required this.spend,
     required this.incomeCount,
+    this.spendCount = 0,
     this.changePercent,
   });
 
@@ -373,6 +402,7 @@ class FinanceSummary {
   final int income;
   final int spend;
   final int incomeCount;
+  final int spendCount;
   final double? changePercent;
 
   static const empty = FinanceSummary(net: 0, income: 0, spend: 0, incomeCount: 0);
@@ -382,16 +412,18 @@ class FinanceSummary {
         income: j['income'] as int,
         spend: j['spend'] as int,
         incomeCount: j['incomeCount'] as int,
+        spendCount: (j['spendCount'] as int?) ?? 0,
         changePercent: (j['changePercent'] as num?)?.toDouble(),
       );
 }
 
-enum AppointmentStatus { booked, done, missed, cancelled }
+enum AppointmentStatus { booked, done, missed, cancelled, requested }
 
 AppointmentStatus _apptStatusFrom(String s) => switch (s) {
       'Done' => AppointmentStatus.done,
       'Missed' => AppointmentStatus.missed,
       'Cancelled' => AppointmentStatus.cancelled,
+      'Requested' => AppointmentStatus.requested,
       _ => AppointmentStatus.booked,
     };
 

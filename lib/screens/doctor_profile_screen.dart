@@ -6,8 +6,14 @@ import '../data/clinic_store.dart';
 import '../data/doctor_store.dart';
 import '../services/auth_service.dart';
 import '../widgets/common.dart';
+import '../services/session.dart';
 import 'auth/login_screen.dart';
+import 'doctor/clinic_qr_screen.dart';
+import 'doctor/content_screens.dart';
+import 'doctor/team_screen.dart';
 import 'slot_setup_screen.dart';
+import 'auth/delete_account.dart';
+import '../widgets/legal.dart';
 
 /// The doctor's own profile: a clear view first, editing on its own page.
 class DoctorProfileScreen extends StatelessWidget {
@@ -18,9 +24,14 @@ class DoctorProfileScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Log out?'),
-        content: const Text('You can log in again with your mobile number, Google or Apple.'),
+        content: const Text(
+          'You can log in again with your mobile number, Google or Apple.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.danger),
@@ -39,7 +50,8 @@ class DoctorProfileScreen extends StatelessWidget {
   }
 
   void _edit(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const _EditProfilePage()));
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const _EditProfilePage()));
   }
 
   @override
@@ -57,9 +69,20 @@ class DoctorProfileScreen extends StatelessWidget {
                 expandedHeight: 270,
                 backgroundColor: AppColors.primaryDark,
                 foregroundColor: Colors.white,
-                title: Text('My profile', style: AppText.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+                title: Text(
+                  'My profile',
+                  style: AppText.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 actions: [
-                  IconButton(tooltip: 'Edit profile', onPressed: () => _edit(context), icon: const Icon(Icons.edit_outlined)),
+                  if (session.isDoctor)
+                    IconButton(
+                      tooltip: 'Edit profile',
+                      onPressed: () => _edit(context),
+                      icon: const Icon(Icons.edit_outlined),
+                    ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   collapseMode: CollapseMode.parallax,
@@ -83,11 +106,21 @@ class DoctorProfileScreen extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
-                                boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 16, offset: Offset(0, 6))],
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x33000000),
+                                    blurRadius: 16,
+                                    offset: Offset(0, 6),
+                                  ),
+                                ],
                               ),
                               child: Text(
                                 p.initials,
-                                style: AppText.poppins(fontSize: 30, fontWeight: FontWeight.w700, color: AppColors.primaryDark),
+                                style: AppText.poppins(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.primaryDark,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -95,16 +128,29 @@ class DoctorProfileScreen extends StatelessWidget {
                               p.name,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: AppText.poppins(fontSize: 21, fontWeight: FontWeight.w600, color: Colors.white),
+                              style: AppText.poppins(
+                                fontSize: 21,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              [p.qualification, p.speciality].where((x) => x.isNotEmpty).join(' • ').ifEmpty('Add your qualification'),
-                              style: AppText.inter(fontSize: 13.5, color: Colors.white70),
+                              [p.qualification, p.speciality]
+                                  .where((x) => x.isNotEmpty)
+                                  .join(' • ')
+                                  .ifEmpty('Add your qualification'),
+                              style: AppText.inter(
+                                fontSize: 13.5,
+                                color: Colors.white70,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.18),
                                 borderRadius: BorderRadius.circular(999),
@@ -112,11 +158,19 @@ class DoctorProfileScreen extends StatelessWidget {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.local_hospital_rounded, size: 14, color: Colors.white),
+                                  const Icon(
+                                    Icons.local_hospital_rounded,
+                                    size: 14,
+                                    color: Colors.white,
+                                  ),
                                   const SizedBox(width: 5),
                                   Text(
                                     p.clinic,
-                                    style: AppText.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: Colors.white),
+                                    style: AppText.inter(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -134,66 +188,161 @@ class DoctorProfileScreen extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        _Stat(value: '${clinic.registeredCount}', label: 'Patients', icon: Icons.groups_rounded),
+                        _Stat(
+                          value: '${clinic.registeredCount}',
+                          label: 'Patients',
+                          icon: Icons.groups_rounded,
+                        ),
                         const SizedBox(width: 10),
-                        _Stat(value: '${p.experienceYears} yrs', label: 'Experience', icon: Icons.timeline_rounded),
+                        _Stat(
+                          value: '${p.experienceYears} yrs',
+                          label: 'Experience',
+                          icon: Icons.timeline_rounded,
+                        ),
                         const SizedBox(width: 10),
-                        _Stat(value: '₹${p.fee}', label: 'Consult fee', icon: Icons.payments_outlined),
+                        _Stat(
+                          value: '₹${p.fee}',
+                          label: 'Consult fee',
+                          icon: Icons.payments_outlined,
+                        ),
                       ],
                     ),
-                    if (p.qualification.isEmpty || p.regNo.isEmpty) ...[
+                    if (session.isReception) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.chipBlue,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          'Signed in as ${session.memberName} (front desk). Only the doctor can prescribe or change these details.',
+                          style: AppText.inter(fontSize: 13),
+                        ),
+                      ),
+                    ],
+                    if (session.isDoctor &&
+                        (p.qualification.isEmpty || p.regNo.isEmpty)) ...[
                       const SizedBox(height: 14),
                       _CompleteCard(onTap: () => _edit(context)),
                     ],
                     const SizedBox(height: 18),
                     const SectionLabel('Contact & registration'),
-                    _Group(children: [
-                      _InfoTile(icon: Icons.phone_outlined, label: 'Mobile', value: p.phone),
-                      _InfoTile(icon: Icons.mail_outline_rounded, label: 'Email', value: p.email),
-                      _InfoTile(icon: Icons.badge_outlined, label: 'Registration no.', value: p.regNo),
-                      _InfoTile(icon: Icons.translate_rounded, label: 'Languages', value: p.languages),
-                    ]),
+                    _Group(
+                      children: [
+                        _InfoTile(
+                          icon: Icons.phone_outlined,
+                          label: 'Mobile',
+                          value: p.phone,
+                        ),
+                        _InfoTile(
+                          icon: Icons.mail_outline_rounded,
+                          label: 'Email',
+                          value: p.email,
+                        ),
+                        _InfoTile(
+                          icon: Icons.badge_outlined,
+                          label: 'Registration no.',
+                          value: p.regNo,
+                        ),
+                        _InfoTile(
+                          icon: Icons.translate_rounded,
+                          label: 'Languages',
+                          value: p.languages,
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 18),
                     const SectionLabel('About'),
                     SoftCard(
                       onTap: () => _edit(context),
                       padding: const EdgeInsets.all(16),
                       child: Text(
-                        p.bio.isEmpty ? 'Add a short introduction for patients.' : p.bio,
+                        p.bio.isEmpty
+                            ? 'Add a short introduction for patients.'
+                            : p.bio,
                         style: AppText.inter(
                           fontSize: 14,
                           height: 1.5,
-                          color: p.bio.isEmpty ? AppColors.textFaint : AppColors.textPrimary,
+                          color: p.bio.isEmpty
+                              ? AppColors.textFaint
+                              : AppColors.textPrimary,
                         ),
                       ),
                     ),
                     const SizedBox(height: 18),
+                    if (session.isDoctor) ...[
+                      const SectionLabel('My clinic network'),
+                      _Group(
+                        children: [
+                          _LinkTile(
+                            icon: Icons.qr_code_2_rounded,
+                            title: 'Clinic QR & details',
+                            subtitle: 'Patients scan to get a token; address and map pin',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ClinicQrScreen(),
+                              ),
+                            ),
+                          ),
+                          _LinkTile(
+                            icon: Icons.groups_2_outlined,
+                            title: 'Team & partners',
+                            subtitle:
+                                'Front desk, partner clinics and laboratories',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const TeamScreen(),
+                              ),
+                            ),
+                          ),
+                          _LinkTile(
+                            icon: Icons.article_outlined,
+                            title: 'Blogs',
+                            subtitle: 'Health tips with photos and videos',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const PostsScreen(),
+                              ),
+                            ),
+                          ),
+                          _LinkTile(
+                            icon: Icons.health_and_safety_outlined,
+                            title: 'Health camps',
+                            subtitle:
+                                'Blood donation, full body checkup and more',
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const CampsScreen(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                    ],
                     const SectionLabel('Clinic settings'),
-                    _Group(children: [
-                      _LinkTile(
-                        icon: Icons.event_available_outlined,
-                        title: 'Appointment slots',
-                        subtitle: slotConfig.summary,
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const SlotSetupScreen()),
+                    _Group(
+                      children: [
+                        _LinkTile(
+                          icon: Icons.event_available_outlined,
+                          title: 'Appointment slots',
+                          subtitle: slotConfig.summary,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SlotSetupScreen(),
+                            ),
+                          ),
                         ),
-                      ),
-                      _LinkTile(
-                        icon: Icons.edit_note_rounded,
-                        title: 'Edit profile',
-                        subtitle: 'Name, qualification, fee and more',
-                        onTap: () => _edit(context),
-                      ),
-                      _LinkTile(
-                        icon: Icons.article_outlined,
-                        title: 'Articles, blogs & reels',
-                        subtitle: 'Publish health content for patients',
-                        trailing: 'Soon',
-                        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Coming soon')),
-                        ),
-                      ),
-                    ]),
+                        if (session.isDoctor)
+                          _LinkTile(
+                            icon: Icons.edit_note_rounded,
+                            title: 'Edit profile',
+                            subtitle: 'Name, qualification, fee and more',
+                            onTap: () => _edit(context),
+                          ),
+                      ],
+                    ),
                     const SizedBox(height: 22),
                     OutlinedButton.icon(
                       onPressed: () => _logout(context),
@@ -206,6 +355,9 @@ class DoctorProfileScreen extends StatelessWidget {
                       icon: const Icon(Icons.logout_rounded, size: 20),
                       label: const Text('Log out'),
                     ),
+                    const SizedBox(height: 8),
+                    const Center(child: DeleteAccountTile()),
+                    const LegalLinks(),
                   ],
                 ),
               ),
@@ -236,7 +388,13 @@ class _Stat extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          boxShadow: const [BoxShadow(color: Color(0x0F1B2740), blurRadius: 14, offset: Offset(0, 4))],
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F1B2740),
+              blurRadius: 14,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -246,9 +404,16 @@ class _Stat extends StatelessWidget {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppText.poppins(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              style: AppText.poppins(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
             ),
-            Text(label, style: AppText.inter(fontSize: 12, color: AppColors.textMuted)),
+            Text(
+              label,
+              style: AppText.inter(fontSize: 12, color: AppColors.textMuted),
+            ),
           ],
         ),
       ),
@@ -273,12 +438,19 @@ class _CompleteCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              const Icon(Icons.assignment_ind_outlined, color: AppColors.warning),
+              const Icon(
+                Icons.assignment_ind_outlined,
+                color: AppColors.warning,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   'Complete your profile: add qualification and registration number.',
-                  style: AppText.inter(fontSize: 13.5, fontWeight: FontWeight.w600, height: 1.35),
+                  style: AppText.inter(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
                 ),
               ),
               const Icon(Icons.chevron_right_rounded, color: AppColors.warning),
@@ -302,7 +474,8 @@ class _Group extends StatelessWidget {
       child: Column(
         children: [
           for (final (i, c) in children.indexed) ...[
-            if (i > 0) const Divider(height: 1, indent: 62, color: Color(0xFFEDF0F7)),
+            if (i > 0)
+              const Divider(height: 1, indent: 62, color: Color(0xFFEDF0F7)),
             c,
           ],
         ],
@@ -312,7 +485,11 @@ class _Group extends StatelessWidget {
 }
 
 class _InfoTile extends StatelessWidget {
-  const _InfoTile({required this.icon, required this.label, required this.value});
+  const _InfoTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   final IconData icon;
   final String label;
@@ -327,7 +504,10 @@ class _InfoTile extends StatelessWidget {
           Container(
             width: 36,
             height: 36,
-            decoration: const BoxDecoration(color: AppColors.mintSoft, shape: BoxShape.circle),
+            decoration: const BoxDecoration(
+              color: AppColors.mintSoft,
+              shape: BoxShape.circle,
+            ),
             child: Icon(icon, size: 19, color: AppColors.primaryDark),
           ),
           const SizedBox(width: 12),
@@ -335,13 +515,21 @@ class _InfoTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: AppText.inter(fontSize: 12, color: AppColors.textMuted)),
+                Text(
+                  label,
+                  style: AppText.inter(
+                    fontSize: 12,
+                    color: AppColors.textMuted,
+                  ),
+                ),
                 Text(
                   value.isEmpty ? 'Not added' : value,
                   style: AppText.inter(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w600,
-                    color: value.isEmpty ? AppColors.textFaint : AppColors.textPrimary,
+                    color: value.isEmpty
+                        ? AppColors.textFaint
+                        : AppColors.textPrimary,
                   ),
                 ),
               ],
@@ -359,14 +547,12 @@ class _LinkTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.trailing,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final String? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -379,7 +565,10 @@ class _LinkTile extends StatelessWidget {
             Container(
               width: 36,
               height: 36,
-              decoration: const BoxDecoration(color: AppColors.mint, shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: AppColors.mint,
+                shape: BoxShape.circle,
+              ),
               child: Icon(icon, size: 19, color: AppColors.primaryDark),
             ),
             const SizedBox(width: 12),
@@ -387,20 +576,26 @@ class _LinkTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: AppText.poppins(fontSize: 14.5, fontWeight: FontWeight.w600)),
+                  Text(
+                    title,
+                    style: AppText.poppins(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   Text(
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppText.inter(fontSize: 12.5, color: AppColors.textMuted),
+                    style: AppText.inter(
+                      fontSize: 12.5,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ],
               ),
             ),
-            if (trailing != null)
-              AppChip(label: trailing!, fontSize: 11)
-            else
-              const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
           ],
         ),
       ),
@@ -434,7 +629,16 @@ class _EditProfilePageState extends State<_EditProfilePage> {
 
   @override
   void dispose() {
-    for (final c in [_name, _speciality, _clinic, _regNo, _fee, _experience, _languages, _bio]) {
+    for (final c in [
+      _name,
+      _speciality,
+      _clinic,
+      _regNo,
+      _fee,
+      _experience,
+      _languages,
+      _bio,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -449,7 +653,8 @@ class _EditProfilePageState extends State<_EditProfilePage> {
       clinic: _clinic.text.trim().isEmpty ? null : _clinic.text.trim(),
       regNo: _regNo.text.trim(),
       fee: int.tryParse(_fee.text) ?? doctorProfile.fee,
-      experienceYears: int.tryParse(_experience.text) ?? doctorProfile.experienceYears,
+      experienceYears:
+          int.tryParse(_experience.text) ?? doctorProfile.experienceYears,
       languages: _languages.text.trim(),
       bio: _bio.text.trim(),
     );
@@ -467,8 +672,14 @@ class _EditProfilePageState extends State<_EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    Widget field(String label, TextEditingController c, IconData icon,
-        {bool digits = false, int lines = 1, TextCapitalization caps = TextCapitalization.words}) {
+    Widget field(
+      String label,
+      TextEditingController c,
+      IconData icon, {
+      bool digits = false,
+      int lines = 1,
+      TextCapitalization caps = TextCapitalization.words,
+    }) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: TextField(
@@ -476,7 +687,9 @@ class _EditProfilePageState extends State<_EditProfilePage> {
           minLines: 1,
           maxLines: lines,
           keyboardType: digits ? TextInputType.number : null,
-          inputFormatters: digits ? [FilteringTextInputFormatter.digitsOnly] : null,
+          inputFormatters: digits
+              ? [FilteringTextInputFormatter.digitsOnly]
+              : null,
           textCapitalization: caps,
           style: AppText.inter(fontSize: 15, fontWeight: FontWeight.w500),
           decoration: InputDecoration(
@@ -490,7 +703,10 @@ class _EditProfilePageState extends State<_EditProfilePage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.primaryDark, width: 1.6),
+              borderSide: const BorderSide(
+                color: AppColors.primaryDark,
+                width: 1.6,
+              ),
             ),
           ),
         ),
@@ -501,7 +717,10 @@ class _EditProfilePageState extends State<_EditProfilePage> {
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        title: Text('Edit profile', style: AppText.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+        title: Text(
+          'Edit profile',
+          style: AppText.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+        ),
       ),
       body: ListView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -509,7 +728,14 @@ class _EditProfilePageState extends State<_EditProfilePage> {
         children: [
           const SectionLabel('Basic'),
           field('Full name', _name, Icons.person_outline_rounded),
-          Text('Qualification', style: AppText.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textMuted)),
+          Text(
+            'Qualification',
+            style: AppText.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textMuted,
+            ),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -527,7 +753,9 @@ class _EditProfilePageState extends State<_EditProfilePage> {
                   labelStyle: AppText.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: _qualification == q ? Colors.white : AppColors.textPrimary,
+                    color: _qualification == q
+                        ? Colors.white
+                        : AppColors.textPrimary,
                   ),
                   onSelected: (_) => setState(() => _qualification = q),
                 ),
@@ -536,18 +764,43 @@ class _EditProfilePageState extends State<_EditProfilePage> {
           const SizedBox(height: 14),
           field('Speciality', _speciality, Icons.workspace_premium_outlined),
           field('Clinic / hospital', _clinic, Icons.local_hospital_outlined),
-          field('Medical registration no.', _regNo, Icons.badge_outlined, caps: TextCapitalization.characters),
+          field(
+            'Medical registration no.',
+            _regNo,
+            Icons.badge_outlined,
+            caps: TextCapitalization.characters,
+          ),
           const SizedBox(height: 6),
           const SectionLabel('Practice'),
           Row(
             children: [
-              Expanded(child: field('Fee (₹)', _fee, Icons.currency_rupee_rounded, digits: true)),
+              Expanded(
+                child: field(
+                  'Fee (₹)',
+                  _fee,
+                  Icons.currency_rupee_rounded,
+                  digits: true,
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: field('Experience (yrs)', _experience, Icons.timeline_rounded, digits: true)),
+              Expanded(
+                child: field(
+                  'Experience (yrs)',
+                  _experience,
+                  Icons.timeline_rounded,
+                  digits: true,
+                ),
+              ),
             ],
           ),
           field('Languages', _languages, Icons.translate_rounded),
-          field('About you', _bio, Icons.notes_rounded, lines: 5, caps: TextCapitalization.sentences),
+          field(
+            'About you',
+            _bio,
+            Icons.notes_rounded,
+            lines: 5,
+            caps: TextCapitalization.sentences,
+          ),
         ],
       ),
       bottomNavigationBar: SafeArea(

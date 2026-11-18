@@ -11,6 +11,8 @@ import '../services/patient_actions.dart';
 import '../widgets/common.dart';
 import '../widgets/record_media.dart';
 import 'booking_sheet.dart';
+import '../services/session.dart';
+import 'doctor/network_actions.dart';
 import 'patient_detail_screen.dart';
 import 'prescribe_sheet.dart';
 
@@ -248,6 +250,10 @@ class _RecordHeader extends StatelessWidget {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (v) async {
+              if (v == 'applink') {
+                sendAppLoginLink(context, patient);
+                return;
+              }
               if (v == 'details') {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => PatientDetailScreen(patient: patient)),
@@ -274,6 +280,7 @@ class _RecordHeader extends StatelessWidget {
             },
             itemBuilder: (_) => [
               const PopupMenuItem(value: 'details', child: Text('Patient details')),
+              const PopupMenuItem(value: 'applink', child: Text('Send app login on WhatsApp')),
               PopupMenuItem(
                 value: consent ? 'stop' : 'allow',
                 child: Text(consent ? 'Stop WhatsApp messages' : 'Allow WhatsApp messages'),
@@ -489,6 +496,15 @@ class _RxBlock extends StatelessWidget {
                 ),
               ),
               _DeliveryChip(status: entry.delivery),
+              const SizedBox(width: 4),
+              InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => sendRxOnWhatsApp(context, entry.id),
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.send_rounded, size: 20, color: Color(0xFF25D366)),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -742,7 +758,7 @@ class _ComposerState extends State<_Composer> {
     if (await pickAndUpload(context, patient)) widget.onChanged();
   }
 
-  /// Sends the most recent prescription again on WhatsApp.
+  /// Opens WhatsApp with the latest prescription's link for this patient.
   Future<void> _sendLatest() async {
     final latest = widget.records.where((r) => r.kind == RecordKind.prescription).firstOrNull;
     if (latest == null) {
@@ -751,15 +767,8 @@ class _ComposerState extends State<_Composer> {
       );
       return;
     }
-    final messenger = ScaffoldMessenger.of(context);
-    String? status;
-    final ok = await runAction(context, () async {
-      status = await clinic.resendPrescription(latest.id);
-    });
-    if (ok) {
-      messenger.showSnackBar(SnackBar(content: Text(whatsAppResultMessage(status, patient.name))));
-      widget.onChanged();
-    }
+    await sendRxOnWhatsApp(context, latest.id);
+    widget.onChanged();
   }
 
   ButtonStyle _chipStyle({Color? bg, Color? fg}) => ElevatedButton.styleFrom(
@@ -794,21 +803,34 @@ class _ComposerState extends State<_Composer> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
+                if (session.isDoctor) ...[
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final id = await showPrescribeSheet(context, patient);
+                      widget.onChanged();
+                      if (id != null && context.mounted) await afterPrescribe(context, patient, id);
+                      widget.onChanged();
+                    },
+                    style: _chipStyle(bg: AppColors.aqua, fg: const Color(0xFF004D40)),
+                    icon: const Icon(Icons.medication_outlined, size: 19),
+                    label: const Text('Prescribe'),
+                  ),
+                  const SizedBox(width: 10),
+                ],
                 ElevatedButton.icon(
                   onPressed: () async {
-                    await showPrescribeSheet(context, patient);
-                    widget.onChanged();
+                    if (await showLabOrderSheet(context, patient)) widget.onChanged();
                   },
-                  style: _chipStyle(bg: AppColors.aqua, fg: const Color(0xFF004D40)),
-                  icon: const Icon(Icons.medication_outlined, size: 19),
-                  label: const Text('Prescribe'),
+                  style: _chipStyle(bg: const Color(0xFFDFF6F7), fg: const Color(0xFF00838F)),
+                  icon: const Icon(Icons.biotech_outlined, size: 19),
+                  label: const Text('Lab tests'),
                 ),
                 const SizedBox(width: 10),
                 ElevatedButton.icon(
                   onPressed: _sendLatest,
                   style: _chipStyle(),
                   icon: const Icon(Icons.chat_outlined, size: 19),
-                  label: const Text('Send Rx via WhatsApp'),
+                  label: const Text('Send Rx on WhatsApp'),
                 ),
                 const SizedBox(width: 10),
                 ElevatedButton.icon(
@@ -982,6 +1004,7 @@ class _DeliveryChip extends StatelessWidget {
       'Read' => ('Read', Icons.done_all_rounded, AppColors.successSoft, AppColors.success),
       'Failed' => ('Not delivered', Icons.error_outline_rounded, AppColors.dangerSoft, AppColors.danger),
       'Skipped' => ('No consent', Icons.block_rounded, AppColors.warningSoft, AppColors.warning),
+      'Shared' => ('Shared', Icons.done_rounded, AppColors.successSoft, AppColors.success),
       _ => ('Not sent', Icons.chat_bubble_outline_rounded, AppColors.chipBlue, AppColors.textMuted),
     };
     return AppChip(label: label, icon: icon, color: bg, textColor: fg, fontSize: 11, bold: true);

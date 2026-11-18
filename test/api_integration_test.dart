@@ -149,7 +149,7 @@ void main() {
     final status = await clinic.prescribe(rajesh, [
       {'name': 'Lycopodium 200CH', 'dose': '4 Globules', 'timing': 'Dawn, Dusk', 'course': '14 Days'},
     ]);
-    expect(status, 'Queued'); // sent by the background worker
+    expect(status.whatsApp, 'Queued'); // sent by the background worker
     final records = await clinic.records(rajesh, 'Test Clinic');
     expect(records.single.kind, RecordKind.prescription);
     expect(records.single.body, contains('Lycopodium 200CH'));
@@ -170,8 +170,8 @@ void main() {
     final skipped = await clinic.prescribe(noConsent, [
       {'name': 'Arnica 30CH', 'dose': '4 Pills', 'timing': 'Noon', 'course': 'As advised'},
     ]);
-    expect(skipped, 'Skipped');
-    expect(whatsAppResultMessage(skipped, 'No Consent'), contains('not agreed'));
+    expect(skipped.whatsApp, 'Skipped');
+    expect(whatsAppResultMessage(skipped.whatsApp, 'No Consent'), contains('not agreed'));
     await clinic.setWhatsAppConsent(noConsent, true);
     expect(clinic.patients.firstWhere((p) => p.name == 'No Consent').whatsAppConsent, isTrue);
     expect(clinic.patients.firstWhere((p) => p.dbId == rajesh.dbId).lastRemedy, 'Lycopodium 200CH');

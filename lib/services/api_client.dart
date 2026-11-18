@@ -14,8 +14,13 @@ class ApiConfig {
 
   static const _override = String.fromEnvironment('API_BASE');
 
+  /// The web portal (same app in the browser), served by the API at /portal/.
+  static String get portalUrl => '${kIsWeb && kReleaseMode && _override.isEmpty ? Uri.base.origin : productionApi}/portal/';
+
   static String get baseUrl {
     if (_override.isNotEmpty) return _override;
+    // The web portal is served by the API itself, so it uses the same address.
+    if (kIsWeb && kReleaseMode) return Uri.base.origin;
     // TestFlight / release builds talk to the real server.
     if (kReleaseMode) return productionApi;
     // Debug runs on this PC: the Android emulator reaches the PC through 10.0.2.2.
@@ -35,7 +40,9 @@ class ApiException implements Exception {
   final String code;
   final String? message;
 
-  bool get isUnauthorized => status == 401 && code != 'invalid_otp';
+  /// The saved login is no longer accepted. Login steps (wrong code, wrong PIN,
+  /// expired link) answer 401 with their own error code and are not this.
+  bool get isUnauthorized => status == 401 && code == 'http_401';
 
   /// Short text safe to show in the UI.
   String get friendly => switch (code) {
@@ -57,6 +64,13 @@ class ApiException implements Exception {
         'empty_message' => 'Type a message first.',
         'file_size_max_15mb' => 'The file is too big (15 MB max).',
         'file_size_max_10mb' => 'The recording is too long.',
+        'sms_not_available' => 'SMS codes are not available yet. Use email instead.',
+        'email_not_registered' => 'No account uses this email. Ask your clinic, or sign up.',
+        'wrong_pin' => 'Wrong PIN. Try again.',
+        'pin_locked' => 'Too many wrong tries. Try again in 15 minutes, or log in another way.',
+        'pin_not_set' => 'This PIN is no longer set up. Please log in another way.',
+        'link_expired' => 'This code has expired. Ask your clinic for a new one.',
+        'confirm_delete' => 'Type DELETE to confirm.',
         'phone_in_use' => 'This number is already used by another account.',
         'network' => 'Cannot reach the server. Check your connection.',
         _ => message ?? 'Something went wrong. Please try again.',
@@ -147,6 +161,18 @@ class ApiClient {
     }, timeout: const Duration(seconds: 90));
   }
 
+  /// Sends a picked file. Works on phones (file path) and on the web (bytes).
+  Future<dynamic> uploadPicked(String path, PickedUpload file, {Map<String, String> fields = const {}}) {
+    return _send(() async {
+      final req = http.MultipartRequest('POST', _uri(path, fields))
+        ..headers.addAll({if (_token != null) 'Authorization': 'Bearer $_token'});
+      req.files.add(file.bytes != null
+          ? http.MultipartFile.fromBytes('file', file.bytes!, filename: file.name)
+          : await http.MultipartFile.fromPath('file', file.path!, filename: file.name));
+      return http.Response.fromStream(await _http.send(req));
+    }, timeout: const Duration(minutes: 5));
+  }
+
   /// Downloads a file (image, document, voice) with the login token.
   Future<List<int>> download(String path) async {
     final http.Response res;
@@ -195,3 +221,12 @@ class ApiClient {
 }
 
 final api = ApiClient.instance;
+
+/// A file chosen by the user: a path on phones, bytes on the web.
+class PickedUpload {
+  const PickedUpload({required this.name, this.path, this.bytes});
+
+  final String name;
+  final String? path;
+  final List<int>? bytes;
+}

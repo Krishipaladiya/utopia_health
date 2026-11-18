@@ -86,7 +86,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                           runSpacing: 8,
                           children: [
                             AppChip(
-                              label: 'Booked ${count(AppointmentStatus.booked)}',
+                              label: 'Booked ${count(AppointmentStatus.booked)}'
+                                  '${count(AppointmentStatus.requested) > 0 ? ' • ${count(AppointmentStatus.requested)} requests' : ''}',
                               color: AppColors.mint,
                               textColor: AppColors.primaryDark,
                               bold: true,
@@ -115,6 +116,10 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                                 body: '${a.patient.name} did not visit. The appointment will be closed.',
                                 action: 'Mark missed',
                                 run: () => appointments.markMissed(a),
+                              ),
+                              onDecide: (approve) => runAction(
+                                context,
+                                () => appointments.decide(a, approve: approve),
                               ),
                               onCancel: () => _confirm(
                                 context,
@@ -254,6 +259,7 @@ class _AppointmentTile extends StatelessWidget {
     required this.onCheckIn,
     required this.onMissed,
     required this.onCancel,
+    required this.onDecide,
   });
 
   final Appointment appointment;
@@ -261,6 +267,7 @@ class _AppointmentTile extends StatelessWidget {
   final VoidCallback onCheckIn;
   final VoidCallback onMissed;
   final VoidCallback onCancel;
+  final ValueChanged<bool> onDecide;
 
   @override
   Widget build(BuildContext context) {
@@ -279,6 +286,7 @@ class _AppointmentTile extends StatelessWidget {
       AppointmentStatus.done => ('Checked in', AppColors.successSoft, AppColors.success),
       AppointmentStatus.missed => ('Missed', AppColors.dangerSoft, AppColors.danger),
       AppointmentStatus.cancelled => ('Cancelled', AppColors.chipBlue, AppColors.textMuted),
+      AppointmentStatus.requested => ('Request', AppColors.warningSoft, AppColors.warning),
     };
 
     return Row(
@@ -339,6 +347,33 @@ class _AppointmentTile extends StatelessWidget {
                     AppChip(label: label, color: bg, textColor: fg, fontSize: 11, bold: true),
                   ],
                 ),
+                if (a.status == AppointmentStatus.requested) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => onDecide(true),
+                          icon: const Icon(Icons.check_rounded, size: 18),
+                          label: const Text('Confirm'),
+                          style: ElevatedButton.styleFrom(shape: const StadiumBorder()),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => onDecide(false),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.danger,
+                            side: const BorderSide(color: Color(0xFFF1C5C5)),
+                            shape: const StadiumBorder(),
+                          ),
+                          child: const Text('Decline'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
                 if (booked) ...[
                   const SizedBox(height: 12),
                   Row(

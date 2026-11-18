@@ -45,6 +45,7 @@ class _AddPatientSheetState extends State<_AddPatientSheet> {
   String _gender = 'Male';
   String _relationship = 'Self';
   bool _whatsApp = true;
+  bool _share = false;
   bool _more = false;
 
   PatientLookup? _lookup;
@@ -121,6 +122,7 @@ class _AddPatientSheetState extends State<_AddPatientSheet> {
           'address': _address.text.trim(),
           'relationship': _relationship,
           'otherDiseases': _diseases.text.trim(),
+          if (_share) 'shareConsent': true,
         },
       );
       navigator.pop();
@@ -326,6 +328,18 @@ class _AddPatientSheetState extends State<_AddPatientSheet> {
               dense: true,
               title: Text(
                 'Patient agrees to get prescriptions and reminders on WhatsApp',
+                style: AppText.inter(fontSize: 13, height: 1.35, color: AppColors.textMuted),
+              ),
+            ),
+            CheckboxListTile(
+              value: _share,
+              onChanged: (v) => setState(() => _share = v ?? false),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              activeColor: AppColors.primaryDark,
+              dense: true,
+              title: Text(
+                'Patient agrees that doctors they visit on Utopia Health may share notes and visit history',
                 style: AppText.inter(fontSize: 13, height: 1.35, color: AppColors.textMuted),
               ),
             ),

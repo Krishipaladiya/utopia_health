@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 
 /// System notifications (status bar / lock screen) on Android and iOS.
 /// Web and desktop only get the in-app feed.
@@ -97,6 +99,57 @@ class NotificationService {
     }
     permissionGranted.value = granted;
     return granted;
+  }
+
+  bool _tzReady = false;
+
+  /// Daily alert at [hour]:[minute] (India time) until cancelled. Used for medicine reminders.
+  Future<void> scheduleDaily({
+    required int id,
+    required String title,
+    required String body,
+    required int hour,
+    required int minute,
+  }) async {
+    if (!_supported) return;
+    if (!_ready) await init();
+    try {
+      if (!_tzReady) {
+        tzdata.initializeTimeZones();
+        tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
+        _tzReady = true;
+      }
+      final now = tz.TZDateTime.now(tz.local);
+      var at = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+      if (!at.isAfter(now)) at = at.add(const Duration(days: 1));
+      await _plugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: at,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'medicine_reminders',
+            'Medicine reminders',
+            channelDescription: 'Time to take your medicines',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Reminder schedule failed: $e');
+    }
+  }
+
+  Future<void> cancel(int id) async {
+    if (!_supported || !_ready) return;
+    try {
+      await _plugin.cancel(id: id);
+    } catch (_) {}
   }
 
   Future<void> show({
